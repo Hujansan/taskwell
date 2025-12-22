@@ -24,3 +24,15 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Custom focus ring color */
+input:focus,
+textarea:focus,
+select:focus {
+  --tw-ring-color: #11551a;
+}
+
+/* Smooth transitions for all interactive elements */
+button, input, textarea, select {
+  transition: all 0.2s ease;
+}
