@@ -14,7 +14,6 @@ export default function Home() {
   const [authView, setAuthView] = useState<'signin' | 'signup' | 'forgot' | 'reset'>('signin')
   const [view, setView] = useState<'tasks' | 'journal' | 'settings'>('tasks')
   const [showChangePassword, setShowChangePassword] = useState(false)
-  const [mobileStatusFilter, setMobileStatusFilter] = useState<string>('To do')
 
   const supabase = createClient()
 
@@ -315,86 +314,135 @@ export default function Home() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F7F7F8' }}>
       <nav className="bg-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xl font-bold" style={{ backgroundColor: '#11551a' }}>
-              P
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          {/* Desktop Layout */}
+          <div className="hidden md:flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xl font-bold" style={{ backgroundColor: '#11551a' }}>
+                P
+              </div>
+              <h1 className="text-3xl font-bold" style={{ color: '#11551a' }}>Productivity & Wellness</h1>
             </div>
-            <h1 className="text-3xl font-bold" style={{ color: '#11551a' }}>Productivity & Wellness</h1>
+            <div className="flex gap-2 items-center">
+              <button
+                onClick={() => setView('tasks')}
+                className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
+                  view === 'tasks' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                }`}
+                style={view === 'tasks' ? { backgroundColor: '#11551a' } : {}}
+                onMouseEnter={(e) => {
+                  if (view !== 'tasks') {
+                    e.currentTarget.style.backgroundColor = '#e0e0e0'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (view !== 'tasks') {
+                    e.currentTarget.style.backgroundColor = '#e5e7eb'
+                  }
+                }}
+              >
+                Tasks
+              </button>
+              <button
+                onClick={() => setView('journal')}
+                className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
+                  view === 'journal' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                }`}
+                style={view === 'journal' ? { backgroundColor: '#11551a' } : {}}
+                onMouseEnter={(e) => {
+                  if (view !== 'journal') {
+                    e.currentTarget.style.backgroundColor = '#e0e0e0'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (view !== 'journal') {
+                    e.currentTarget.style.backgroundColor = '#e5e7eb'
+                  }
+                }}
+              >
+                Journal
+              </button>
+              <button
+                onClick={() => setView('settings')}
+                className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
+                  view === 'settings' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                }`}
+                style={view === 'settings' ? { backgroundColor: '#11551a' } : {}}
+                onMouseEnter={(e) => {
+                  if (view !== 'settings') {
+                    e.currentTarget.style.backgroundColor = '#e0e0e0'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (view !== 'settings') {
+                    e.currentTarget.style.backgroundColor = '#e5e7eb'
+                  }
+                }}
+              >
+                Settings
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                style={{ backgroundColor: '#f56714' }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e55d13')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f56714')}
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
-          <div className="flex gap-2 items-center">
-            <button
-              onClick={() => setView('tasks')}
-              className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-                view === 'tasks' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
-              }`}
-              style={view === 'tasks' ? { backgroundColor: '#11551a' } : {}}
-              onMouseEnter={(e) => {
-                if (view !== 'tasks') {
-                  e.currentTarget.style.backgroundColor = '#e0e0e0'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (view !== 'tasks') {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }
-              }}
-            >
-              Tasks
-            </button>
-            <button
-              onClick={() => setView('journal')}
-              className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-                view === 'journal' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
-              }`}
-              style={view === 'journal' ? { backgroundColor: '#11551a' } : {}}
-              onMouseEnter={(e) => {
-                if (view !== 'journal') {
-                  e.currentTarget.style.backgroundColor = '#e0e0e0'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (view !== 'journal') {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }
-              }}
-            >
-              Journal
-            </button>
-            <button
-              onClick={() => setView('settings')}
-              className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-                view === 'settings' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
-              }`}
-              style={view === 'settings' ? { backgroundColor: '#11551a' } : {}}
-              onMouseEnter={(e) => {
-                if (view !== 'settings') {
-                  e.currentTarget.style.backgroundColor = '#e0e0e0'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (view !== 'settings') {
-                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                }
-              }}
-            >
-              Settings
-            </button>
-            <button
-              onClick={handleSignOut}
-              className="text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-              style={{ backgroundColor: '#f56714' }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e55d13')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f56714')}
-            >
-              Sign Out
-            </button>
+
+          {/* Mobile Layout */}
+          <div className="md:hidden">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xl font-bold" style={{ backgroundColor: '#11551a' }}>
+                P
+              </div>
+              <h1 className="text-2xl font-bold" style={{ color: '#11551a' }}>Productivity & Wellness</h1>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setView('tasks')}
+                className={`flex-1 min-w-[80px] px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+                  view === 'tasks' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                }`}
+                style={view === 'tasks' ? { backgroundColor: '#11551a' } : {}}
+              >
+                Tasks
+              </button>
+              <button
+                onClick={() => setView('journal')}
+                className={`flex-1 min-w-[80px] px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+                  view === 'journal' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                }`}
+                style={view === 'journal' ? { backgroundColor: '#11551a' } : {}}
+              >
+                Journal
+              </button>
+              <button
+                onClick={() => setView('settings')}
+                className={`flex-1 min-w-[80px] px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+                  view === 'settings' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                }`}
+                style={view === 'settings' ? { backgroundColor: '#11551a' } : {}}
+              >
+                Settings
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="flex-1 min-w-[80px] text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                style={{ backgroundColor: '#f56714' }}
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
         </div>
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {view === 'tasks' ? <TasksView mobileStatusFilter={mobileStatusFilter} setMobileStatusFilter={setMobileStatusFilter} /> : view === 'journal' ? <JournalView /> : <SettingsView user={user} />}
+        {view === 'tasks' ? <TasksView /> : view === 'journal' ? <JournalView /> : <SettingsView user={user} />}
       </div>
     </div>
   )
@@ -617,7 +665,7 @@ function SettingsView({ user }: { user: User }) {
   )
 }
 
-function TasksView({ mobileStatusFilter, setMobileStatusFilter }: { mobileStatusFilter: string, setMobileStatusFilter: (filter: string) => void }) {
+function TasksView() {
   const [tasks, setTasks] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
   const [selectedTask, setSelectedTask] = useState<any>(null)
@@ -627,6 +675,7 @@ function TasksView({ mobileStatusFilter, setMobileStatusFilter }: { mobileStatus
   const [statusFilters, setStatusFilters] = useState<Set<string>>(new Set())
   const [dateFilter, setDateFilter] = useState<string>('All')
   const [categoryFilters, setCategoryFilters] = useState<Set<string>>(new Set(['All']))
+  const [mobileFilterTab, setMobileFilterTab] = useState<'Status' | 'Date' | 'Category' | 'Sort'>('Status')
   const supabase = createClient()
 
   useEffect(() => {
@@ -1140,21 +1189,141 @@ function TasksView({ mobileStatusFilter, setMobileStatusFilter }: { mobileStatus
             </div>
           </div>
           
-          {/* Mobile Status Tabs - Only visible on mobile */}
-          <div className="md:hidden mb-3 pb-3 border-b overflow-x-auto">
-            <div className="flex gap-2 min-w-max">
-              {['Concept', 'To do', 'In progress', 'Waiting', 'On hold', 'Complete', 'Dropped'].map(status => (
+          {/* Mobile Filter Tabs - Only visible on mobile */}
+          <div className="md:hidden">
+            {/* Tab Headers */}
+            <div className="flex gap-1 mb-3 border-b">
+              {(['Status', 'Date', 'Category', 'Sort'] as const).map((tab) => (
                 <button
-                  key={status}
-                  onClick={() => setMobileStatusFilter(status)}
-                  className={`px-3 py-1.5 rounded-lg text-lg font-medium whitespace-nowrap transition-all duration-200 hover:scale-[1.02] cursor-pointer ${
-                    mobileStatusFilter === status ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                  key={tab}
+                  onClick={() => setMobileFilterTab(tab)}
+                  className={`flex-1 px-2 py-2 text-sm font-medium transition-all duration-200 cursor-pointer border-b-2 ${
+                    mobileFilterTab === tab
+                      ? 'border-green-700 text-green-700'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
-                  style={mobileStatusFilter === status ? { backgroundColor: '#11551a' } : {}}
+                  style={mobileFilterTab === tab ? { borderBottomColor: '#11551a', color: '#11551a' } : {}}
                 >
-                  {status}
+                  {tab}
                 </button>
               ))}
+            </div>
+
+            {/* Tab Content */}
+            <div className="mb-3 min-h-[100px]">
+              {mobileFilterTab === 'Status' && (
+                <div className="flex flex-wrap gap-1.5">
+                  {['Ongoing', 'Concept', 'To do', 'In progress', 'Waiting', 'On hold', 'Complete', 'Dropped'].map(status => {
+                    const baseTasks = getBaseTasksForStatusCount(status)
+                    const count = getStatusCount(status, baseTasks)
+                    const isSelected = statusFilters.has(status)
+                    return (
+                      <button
+                        key={status}
+                        onClick={() => toggleStatusFilter(status)}
+                        className={`px-2.5 py-1 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+                          isSelected
+                            ? 'text-white shadow-md'
+                            : 'bg-gray-200 text-gray-700'
+                        }`}
+                        style={isSelected ? { backgroundColor: '#11551a' } : {}}
+                      >
+                        {status} ({count})
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {mobileFilterTab === 'Date' && (
+                <div className="flex flex-wrap gap-1.5">
+                  {['All', 'Today & overdue', 'Next 7 days', 'Completed last 7 days', 'No due date'].map(dateOption => {
+                    const baseTasks = getBaseTasksForDateCount(dateOption)
+                    const count = getDateCount(dateOption, baseTasks)
+                    const isSelected = dateFilter === dateOption
+                    return (
+                      <button
+                        key={dateOption}
+                        onClick={() => setDateFilter(dateOption)}
+                        className={`px-2.5 py-1 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+                          isSelected
+                            ? 'text-white shadow-md'
+                            : 'bg-gray-200 text-gray-700'
+                        }`}
+                        style={isSelected ? { backgroundColor: '#11551a' } : {}}
+                      >
+                        {dateOption} ({count})
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {mobileFilterTab === 'Category' && (
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => toggleCategoryFilter('All')}
+                    className={`px-2.5 py-1 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+                      categoryFilters.has('All')
+                        ? 'text-white shadow-md'
+                        : 'bg-gray-200 text-gray-700'
+                    }`}
+                    style={categoryFilters.has('All') ? { backgroundColor: '#11551a' } : {}}
+                  >
+                    All ({getCategoryCount('All', getBaseTasksForCategoryCount('All'))})
+                  </button>
+                  {categories.map(category => {
+                    const baseTasks = getBaseTasksForCategoryCount(category.id)
+                    const count = getCategoryCount(category.id, baseTasks)
+                    const isSelected = categoryFilters.has(category.id)
+                    return (
+                      <button
+                        key={category.id}
+                        onClick={() => toggleCategoryFilter(category.id)}
+                        className={`px-2.5 py-1 rounded-lg text-sm font-medium text-white transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+                          isSelected
+                            ? 'ring-2 ring-offset-2'
+                            : ''
+                        }`}
+                        style={{ 
+                          backgroundColor: category.color
+                        }}
+                      >
+                        {category.name} ({count})
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {mobileFilterTab === 'Sort' && (
+                <div className="space-y-3">
+                  <div className="flex gap-3 items-center">
+                    <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Sort by:</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as 'due_date' | 'status')}
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 cursor-pointer"
+                      style={{ focusRingColor: '#11551a' } as any}
+                    >
+                      <option value="due_date">Due Date</option>
+                      <option value="status">Status</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-3 items-center">
+                    <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Order:</label>
+                    <select
+                      value={sortOrder}
+                      onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 cursor-pointer"
+                      style={{ focusRingColor: '#11551a' } as any}
+                    >
+                      <option value="asc">Ascending</option>
+                      <option value="desc">Descending</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1383,9 +1552,9 @@ function TasksView({ mobileStatusFilter, setMobileStatusFilter }: { mobileStatus
             ))}
           </div>
 
-          {/* Mobile: Single column with status filter */}
+          {/* Mobile: Single column */}
           <div className="md:hidden space-y-3">
-            {sortedTasks.filter(task => task.status === mobileStatusFilter).map((task) => (
+            {sortedTasks.map((task) => (
               <div
                 key={task.id}
                 className="bg-white rounded-xl shadow-md active:shadow-xl transition-all duration-200 active:scale-[0.98] p-3 group"
