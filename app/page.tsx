@@ -9,7 +9,11 @@ export default function Home() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [view, setView] = useState<'tasks' | 'journal'>('tasks')
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [authView, setAuthView] = useState<'signin' | 'signup' | 'forgot' | 'reset'>('signin')
+  const [view, setView] = useState<'tasks' | 'journal' | 'settings'>('tasks')
+  const [showChangePassword, setShowChangePassword] = useState(false)
 
   const supabase = createClient()
 
@@ -20,6 +24,10 @@ export default function Home() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
+      // Check if this is a password reset event
+      if (_event === 'PASSWORD_RECOVERY') {
+        setAuthView('reset')
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -27,21 +35,102 @@ export default function Home() {
 
   const handleSignUp = async () => {
     setLoading(true)
+    setError(null)
+    setSuccess(null)
+    
+    if (!email || !password) {
+      setError('Please enter both email and password')
+      setLoading(false)
+      return
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long')
+      setLoading(false)
+      return
+    }
+
     const { error } = await supabase.auth.signUp({ email, password })
-    if (error) alert(error.message)
-    else alert('Check your email for the confirmation link!')
+    if (error) {
+      setError(error.message)
+    } else {
+      setSuccess('Check your email for the confirmation link!')
+      setEmail('')
+      setPassword('')
+    }
     setLoading(false)
   }
 
   const handleSignIn = async () => {
     setLoading(true)
+    setError(null)
+    setSuccess(null)
+    
+    if (!email || !password) {
+      setError('Please enter both email and password')
+      setLoading(false)
+      return
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) alert(error.message)
+    if (error) {
+      setError(error.message)
+    } else {
+      setEmail('')
+      setPassword('')
+    }
+    setLoading(false)
+  }
+
+  const handleForgotPassword = async () => {
+    setLoading(true)
+    setError(null)
+    setSuccess(null)
+    
+    if (!email) {
+      setError('Please enter your email address')
+      setLoading(false)
+      return
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    })
+    
+    if (error) {
+      setError(error.message)
+    } else {
+      setSuccess('Password reset email sent! Check your inbox for instructions.')
+    }
+    setLoading(false)
+  }
+
+  const handleResetPassword = async (newPassword: string) => {
+    setLoading(true)
+    setError(null)
+    setSuccess(null)
+    
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters long')
+      setLoading(false)
+      return
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) {
+      setError(error.message)
+    } else {
+      setSuccess('Password updated successfully!')
+      setAuthView('signin')
+      setPassword('')
+    }
     setLoading(false)
   }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
+    setView('tasks')
+    setShowChangePassword(false)
   }
 
   if (!user) {
@@ -49,38 +138,159 @@ export default function Home() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
           <h2 className="text-3xl font-bold text-center">Welcome</h2>
-          <div className="space-y-4">
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border rounded"
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border rounded"
-            />
-            <div className="flex gap-4">
+          
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+              {error}
+            </div>
+          )}
+          
+          {success && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+              {success}
+            </div>
+          )}
+
+          {authView === 'signin' && (
+            <div className="space-y-4">
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSignIn()}
+                className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSignIn()}
+                className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="flex gap-4">
+                <button
+                  onClick={handleSignIn}
+                  disabled={loading}
+                  className="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </button>
+                <button
+                  onClick={() => {
+                    setAuthView('signup')
+                    setError(null)
+                    setSuccess(null)
+                  }}
+                  disabled={loading}
+                  className="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Sign Up
+                </button>
+              </div>
               <button
-                onClick={handleSignIn}
-                disabled={loading}
-                className="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+                onClick={() => {
+                  setAuthView('forgot')
+                  setError(null)
+                  setSuccess(null)
+                }}
+                className="w-full text-sm text-blue-600 hover:text-blue-800 underline"
               >
-                Sign In
-              </button>
-              <button
-                onClick={handleSignUp}
-                disabled={loading}
-                className="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600"
-              >
-                Sign Up
+                Forgot password?
               </button>
             </div>
-          </div>
+          )}
+
+          {authView === 'signup' && (
+            <div className="space-y-4">
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSignUp()}
+                className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <input
+                type="password"
+                placeholder="Password (min. 6 characters)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSignUp()}
+                className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <div className="flex gap-4">
+                <button
+                  onClick={handleSignUp}
+                  disabled={loading}
+                  className="flex-1 bg-green-500 text-white py-2 rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Signing up...' : 'Sign Up'}
+                </button>
+                <button
+                  onClick={() => {
+                    setAuthView('signin')
+                    setError(null)
+                    setSuccess(null)
+                  }}
+                  className="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-gray-600"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            </div>
+          )}
+
+          {authView === 'forgot' && (
+            <div className="space-y-4">
+              <p className="text-gray-600 text-center">
+                Enter your email address and we'll send you a link to reset your password.
+              </p>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleForgotPassword()}
+                className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="flex gap-4">
+                <button
+                  onClick={handleForgotPassword}
+                  disabled={loading}
+                  className="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Sending...' : 'Send Reset Link'}
+                </button>
+                <button
+                  onClick={() => {
+                    setAuthView('signin')
+                    setError(null)
+                    setSuccess(null)
+                    setEmail('')
+                  }}
+                  className="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-gray-600"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            </div>
+          )}
+
+          {authView === 'reset' && (
+            <ResetPasswordForm
+              onReset={handleResetPassword}
+              onCancel={() => {
+                setAuthView('signin')
+                setError(null)
+                setSuccess(null)
+              }}
+              error={error}
+              success={success}
+              loading={loading}
+            />
+          )}
         </div>
       </div>
     )
@@ -91,12 +301,20 @@ export default function Home() {
       <nav className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Productivity & Wellness</h1>
-          <button
-            onClick={handleSignOut}
-            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-          >
-            Sign Out
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setView('settings')}
+              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+            >
+              Settings
+            </button>
+            <button
+              onClick={handleSignOut}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -118,9 +336,224 @@ export default function Home() {
           >
             Journal
           </button>
+          <button
+            onClick={() => setView('settings')}
+            className={`px-6 py-2 rounded ${
+              view === 'settings' ? 'bg-blue-500 text-white' : 'bg-white'
+            }`}
+          >
+            Settings
+          </button>
         </div>
 
-        {view === 'tasks' ? <TasksView /> : <JournalView />}
+        {view === 'tasks' ? <TasksView /> : view === 'journal' ? <JournalView /> : <SettingsView user={user} />}
+      </div>
+    </div>
+  )
+}
+
+function ResetPasswordForm({ onReset, onCancel, error, success, loading }: any) {
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+
+  const handleSubmit = () => {
+    if (newPassword !== confirmPassword) {
+      return
+    }
+    onReset(newPassword)
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-gray-600 text-center">
+        Enter your new password below.
+      </p>
+      <input
+        type="password"
+        placeholder="New Password (min. 6 characters)"
+        value={newPassword}
+        onChange={(e) => setNewPassword(e.target.value)}
+        onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+        className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      <input
+        type="password"
+        placeholder="Confirm New Password"
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+        onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+        className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      {newPassword && confirmPassword && newPassword !== confirmPassword && (
+        <p className="text-red-600 text-sm">Passwords do not match</p>
+      )}
+      <div className="flex gap-4">
+        <button
+          onClick={handleSubmit}
+          disabled={loading || newPassword !== confirmPassword || newPassword.length < 6}
+          className="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Updating...' : 'Update Password'}
+        </button>
+        <button
+          onClick={onCancel}
+          className="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-gray-600"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function SettingsView({ user }: { user: User }) {
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const supabase = createClient()
+
+  const handleChangePassword = async () => {
+    setLoading(true)
+    setError(null)
+    setSuccess(null)
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setError('Please fill in all fields')
+      setLoading(false)
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setError('New password must be at least 6 characters long')
+      setLoading(false)
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('New passwords do not match')
+      setLoading(false)
+      return
+    }
+
+    // Verify current password by attempting to sign in
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    if (!currentUser?.email) {
+      setError('Unable to verify user')
+      setLoading(false)
+      return
+    }
+
+    // Try to sign in with current password to verify it
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: currentUser.email,
+      password: currentPassword,
+    })
+
+    if (signInError) {
+      setError('Current password is incorrect')
+      setLoading(false)
+      return
+    }
+
+    // Update password
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword })
+    
+    if (updateError) {
+      setError(updateError.message)
+    } else {
+      setSuccess('Password updated successfully!')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-2xl font-bold mb-6">Settings</h2>
+      
+      <div className="space-y-6">
+        {/* User Info */}
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Account Information</h3>
+          <div className="bg-gray-50 p-4 rounded">
+            <p className="text-sm text-gray-600">Email</p>
+            <p className="text-gray-900">{user.email}</p>
+          </div>
+        </div>
+
+        {/* Change Password */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Change Password</h3>
+          
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
+          
+          {success && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
+              {success}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Current Password
+              </label>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter current password"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New Password
+              </label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter new password (min. 6 characters)"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Confirm new password"
+              />
+              {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                <p className="text-red-600 text-sm mt-1">Passwords do not match</p>
+              )}
+            </div>
+            
+            <button
+              onClick={handleChangePassword}
+              disabled={loading || !currentPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword || newPassword.length < 6}
+              className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Updating Password...' : 'Update Password'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
