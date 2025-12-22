@@ -183,10 +183,6 @@ function TasksView() {
   }
 
   const updateTask = async (id: string | null, updates: any) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:187',message:'updateTask called',data:{id,updatesKeys:Object.keys(updates),hasCategories:!!updates.categories,updatesStr:JSON.stringify(updates)},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    
     const { data: { user } } = await supabase.auth.getUser()
     
     // Filter out non-updatable fields (id, user_id, created_at, categories from join)
@@ -208,10 +204,6 @@ function TasksView() {
       filteredUpdates.completion_date = null
     }
   
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:202',message:'Before Supabase update',data:{filteredUpdatesKeys:Object.keys(filteredUpdates),filteredUpdatesStr:JSON.stringify(filteredUpdates)},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
-    
     let error
     let result
     
@@ -236,10 +228,6 @@ function TasksView() {
         .single()
       error = result.error
     }
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:203',message:'After Supabase update',data:{hasError:!!error,errorCode:error?.code,errorMessage:error?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
     
     if (error) {
       console.error('Full error:', JSON.stringify(error, null, 2))
@@ -799,16 +787,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
     setEditedTask(task)
   }, [task])
 
-  // #region agent log
-  useEffect(() => {
-    fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:360',message:'TaskDetailView initialized',data:{taskKeys:Object.keys(task),hasCategories:!!task.categories,taskStr:JSON.stringify(task)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-  }, [task]);
-  // #endregion
-
   const handleSave = async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:363',message:'handleSave called',data:{editedTaskKeys:Object.keys(editedTask),hasCategories:!!editedTask.categories,editedTaskStr:JSON.stringify(editedTask)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     const success = await onUpdate(task.id, editedTask)
     if (success) {
       onClose() // Close the detail view after successful save
@@ -1283,9 +1262,6 @@ function JournalView() {
       .from('habits')
       .select('*')
       .order('sort_order')
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:loadHabits',message:'loadHabits result from DB',data:{habitsCount:data?.length,habitsOrder:data?.map((h:any)=>({id:h.id,name:h.name,group_id:h.group_id,sort_order:h.sort_order}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'G'})}).catch(()=>{});
-    // #endregion
     if (data) setHabits(data)
   }
 
@@ -1421,10 +1397,6 @@ function JournalView() {
     sortedUngroupedHabits.forEach(habit => {
       result.push({ type: 'habit', data: habit })
     })
-
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:getOrganizedHabits',message:'getOrganizedHabits result',data:{resultLength:result.length,groups:result.filter(r=>r.type==='group').map(r=>({groupName:r.data.group.name,habitsInOrder:r.data.habits.map((h:any)=>({name:h.name,sort_order:h.sort_order}))}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'G'})}).catch(()=>{});
-    // #endregion
 
     return result
   }
@@ -1653,9 +1625,6 @@ function JournalView() {
           habits={habits}
           habitGroups={habitGroups}
           onClose={() => {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:HabitManager.onClose',message:'HabitManager closing, reloading data',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'G'})}).catch(()=>{});
-            // #endregion
             setShowHabitManager(false)
             loadHabits()
             loadHabitGroups()
@@ -2022,11 +1991,6 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
   }
 
   const handleDragStart = (index: number, type: 'habit' | 'group') => {
-    // #region agent log
-    const items = getOrganizedItems()
-    const item = items[index]
-    fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2062',message:'handleDragStart called',data:{index,type,itemType:item?.type,itemDataKeys:item?.data ? Object.keys(item.data) : null,hasGroup:item?.type === 'group' ? !!item.data.group : null,itemStr:JSON.stringify(item)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     setDraggedIndex(index)
     setDraggedType(type)
   }
@@ -2036,50 +2000,24 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
     if (draggedIndex === null || draggedIndex === index) return
 
     const items = getOrganizedItems()
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2020',message:'handleDragOver entry',data:{draggedIndex,draggedType,index,itemsLength:items.length,itemsAtIndexType:items[index]?.type,itemsAtIndexDataKeys:items[index]?.data ? Object.keys(items[index].data) : null,isNegativeIndex:draggedIndex < 0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
     
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2028',message:'Before newItems creation',data:{draggedIndex,draggedType,itemsLength:items.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
-    
-    // #region agent log
     if (draggedType === 'habit-in-group' || (typeof draggedIndex === 'number' && draggedIndex < 0)) {
-      fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2031',message:'Early return check - habit-in-group detected',data:{draggedIndex,draggedType,shouldReturn:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
       return;
     }
-    // #endregion
     
     const newItems = [...items]
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2036',message:'After newItems creation',data:{newItemsLength:newItems.length,draggedIndex,newItemsAtIndex:newItems[draggedIndex] ? 'exists' : 'undefined',newItemsAtIndexType:newItems[draggedIndex]?.type},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     const draggedItem = newItems[draggedIndex]
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2039',message:'draggedItem structure',data:{draggedItemType:draggedItem?.type,draggedItemIsUndefined:draggedItem === undefined,draggedItemIsNull:draggedItem === null,draggedItemDataKeys:draggedItem?.data ? Object.keys(draggedItem.data) : null,hasGroup:draggedItem?.data?.group ? true : false,groupId:draggedItem?.data?.group?.id || null,draggedItemStr:JSON.stringify(draggedItem)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     
-    // #region agent log
     if (draggedItem === undefined || draggedItem === null) {
-      fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2044',message:'draggedItem is undefined/null - returning early',data:{draggedIndex,draggedType,newItemsLength:newItems.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
       return;
     }
-    // #endregion
     
     newItems.splice(draggedIndex, 1)
     newItems.splice(index, 0, draggedItem)
     
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2050',message:'After splice operations',data:{newItemsLength:newItems.length,newItemsHasUndefined:newItems.some((item: any) => item === undefined || item === null)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
-    
     // Update sort_order for all items based on their new positions
     // This allows groups and orphan habits to be interleaved
     newItems.forEach((item, newIndex) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2056',message:'forEach iteration',data:{newIndex,itemIsUndefined:item === undefined,itemIsNull:item === null,itemType:item?.type,itemDataExists:!!item?.data},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       // Safety check: skip undefined/null items (should not happen with the early return above, but defensive)
       if (!item || !item.type) return
       if (item.type === 'group' && item.data.group) {
@@ -2110,10 +2048,6 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
 
   const handleDragEnd = async () => {
     if (draggedIndex === null) return
-
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2108',message:'handleDragEnd called',data:{draggedIndex,draggedType},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
 
     // Get the final organized items to determine sort_order
     const items = getOrganizedItems()
@@ -2273,9 +2207,6 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
                             draggable
                             onDragStart={(e) => {
                               e.stopPropagation()
-                              // #region agent log
-                              fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2259',message:'Habit within group drag start',data:{habitId:habit.id,habitName:habit.name,groupId:group.id,groupName:group.name,habitIndex},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-                              // #endregion
                               // Store the habit and group info for reordering within group
                               const allItems = getOrganizedItems()
                               const groupItemIndex = allItems.findIndex((item: any) => item.type === 'group' && item.data.group.id === group.id)
@@ -2294,19 +2225,10 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
                               // Handle reordering within group
                               const draggedHabitId = e.dataTransfer.getData('habitId') || draggedHabitInfo?.habitId || ''
                               const draggedGroupId = e.dataTransfer.getData('groupId') || draggedHabitInfo?.groupId || ''
-                              // #region agent log
-                              fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2260',message:'Group habit onDragOver entry',data:{draggedHabitId,draggedGroupId,targetHabitId:habit.id,targetGroupId:group.id,draggedIndexState:draggedIndex,draggedTypeState:draggedType},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
-                              // #endregion
                               if (draggedGroupId === group.id && draggedHabitId !== habit.id) {
-                                // #region agent log
-                                fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2275',message:'Habit within group drag over',data:{draggedHabitId,targetHabitId:habit.id,groupId:group.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
-                                // #endregion
                                 const newHabits = [...habits]
                                 const draggedHabitIndex = newHabits.findIndex((h: any) => h.id === draggedHabitId)
                                 const targetHabitIndex = newHabits.findIndex((h: any) => h.id === habit.id)
-                                // #region agent log
-                                fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2279',message:'Indices before splice',data:{draggedHabitIndex,targetHabitIndex,newHabitsLength:newHabits.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
-                                // #endregion
                                 if (draggedHabitIndex !== -1 && targetHabitIndex !== -1) {
                                   const [movedHabit] = newHabits.splice(draggedHabitIndex, 1)
                                   newHabits.splice(targetHabitIndex, 0, movedHabit)
@@ -2315,9 +2237,6 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
                                   groupHabitsList.forEach((h: any, i: number) => {
                                     h.sort_order = i
                                   })
-                                  // #region agent log
-                                  fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2287',message:'After reorder within group',data:{groupId:group.id,habitOrder:groupHabitsList.map((h:any)=>({id:h.id,sort_order:h.sort_order}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'F'})}).catch(()=>{});
-                                  // #endregion
                                   setHabits(newHabits)
                                 }
                               }
@@ -2329,16 +2248,10 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
                                 id: h.id,
                                 sort_order: h.sort_order ?? 0  // Use the actual sort_order, not array index
                               }))
-                              // #region agent log
-                              fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2295',message:'Group habit onDragEnd saving',data:{groupId:group.id,updates},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'F'})}).catch(()=>{});
-                              // #endregion
                               const updatePromises = updates.map(({ id, sort_order }: { id: string, sort_order: number }) =>
                                 supabase.from('habits').update({ sort_order }).eq('id', id)
                               )
                               await Promise.all(updatePromises)
-                              // #region agent log
-                              fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/page.tsx:2299',message:'Group habit onDragEnd complete',data:{groupId:group.id,updatesCount:updates.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'F'})}).catch(()=>{});
-                              // #endregion
                               setDraggedIndex(null)
                               setDraggedType(null)
                               setDraggedHabitInfo(null)
