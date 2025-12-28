@@ -161,3 +161,6 @@ CREATE INDEX IF NOT EXISTS idx_calibrations_sort_order ON calibrations(sort_orde
 CREATE INDEX IF NOT EXISTS idx_calibration_scores_user_date ON calibration_scores(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_calibration_scores_calibration_id ON calibration_scores(calibration_id);
 
+
+
+

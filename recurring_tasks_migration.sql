@@ -13,3 +13,6 @@ ADD COLUMN IF NOT EXISTS recurring_frequency TEXT;
 COMMENT ON COLUMN tasks.recurring_frequency IS 
   'Stores frequency as simple string (daily, weekly, monthly, yearly) or JSON string for custom intervals (e.g., {"interval": 2, "unit": "weeks"})';
 
+
+
+

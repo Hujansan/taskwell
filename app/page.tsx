@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 
@@ -12,7 +12,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [authView, setAuthView] = useState<'signin' | 'signup' | 'forgot' | 'reset'>('signin')
-  const [view, setView] = useState<'tasks' | 'journal' | 'settings'>('tasks')
+  const [view, setView] = useState<'dashboard' | 'tasks' | 'journal' | 'settings'>('dashboard')
   const [showChangePassword, setShowChangePassword] = useState(false)
 
   const supabase = createClient()
@@ -129,7 +129,7 @@ export default function Home() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    setView('tasks')
+    setView('dashboard')
     setShowChangePassword(false)
   }
 
@@ -325,6 +325,25 @@ export default function Home() {
             </div>
             <div className="flex gap-2 items-center">
               <button
+                onClick={() => setView('dashboard')}
+                className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
+                  view === 'dashboard' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                }`}
+                style={view === 'dashboard' ? { backgroundColor: '#11551a' } : {}}
+                onMouseEnter={(e) => {
+                  if (view !== 'dashboard') {
+                    e.currentTarget.style.backgroundColor = '#e0e0e0'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (view !== 'dashboard') {
+                    e.currentTarget.style.backgroundColor = '#e5e7eb'
+                  }
+                }}
+              >
+                Dashboard
+              </button>
+              <button
                 onClick={() => setView('tasks')}
                 className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
                   view === 'tasks' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
@@ -403,6 +422,15 @@ export default function Home() {
             </div>
             <div className="flex flex-wrap gap-2">
               <button
+                onClick={() => setView('dashboard')}
+                className={`flex-1 min-w-[80px] px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+                  view === 'dashboard' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                }`}
+                style={view === 'dashboard' ? { backgroundColor: '#11551a' } : {}}
+              >
+                Dashboard
+              </button>
+              <button
                 onClick={() => setView('tasks')}
                 className={`flex-1 min-w-[80px] px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
                   view === 'tasks' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
@@ -442,7 +470,7 @@ export default function Home() {
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {view === 'tasks' ? <TasksView /> : view === 'journal' ? <JournalView /> : <SettingsView user={user} />}
+        {view === 'dashboard' ? <DashboardView /> : view === 'tasks' ? <TasksView /> : view === 'journal' ? <JournalView /> : <SettingsView user={user} />}
       </div>
     </div>
   )
@@ -500,6 +528,506 @@ function ResetPasswordForm({ onReset, onCancel, error, success, loading }: any) 
         >
           Cancel
         </button>
+      </div>
+    </div>
+  )
+}
+
+function DashboardView() {
+  const [tasks, setTasks] = useState<any[]>([])
+  const [habits, setHabits] = useState<any[]>([])
+  const [habitGroups, setHabitGroups] = useState<any[]>([])
+  const [calibrations, setCalibrations] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [dailyData, setDailyData] = useState<any[]>([])
+  const supabase = createClient()
+
+  const loadTasks = async () => {
+    const { data } = await supabase
+      .from('tasks')
+      .select('*, categories(*), sub_tasks(*)')
+      .order('created_at', { ascending: false })
+    if (data) setTasks(data)
+  }
+
+  const loadHabits = async () => {
+    const { data } = await supabase
+      .from('habits')
+      .select('*')
+      .order('sort_order')
+    if (data) setHabits(data)
+  }
+
+  const loadHabitGroups = async () => {
+    const { data } = await supabase
+      .from('habit_groups')
+      .select('*')
+      .order('sort_order')
+    if (data) setHabitGroups(data)
+  }
+
+  const loadCalibrations = async () => {
+    const { data } = await supabase
+      .from('calibrations')
+      .select('*')
+      .order('sort_order')
+    if (data) setCalibrations(data)
+  }
+
+  const loadCategories = async () => {
+    const { data } = await supabase
+      .from('categories')
+      .select('*')
+      .order('sort_order')
+    if (data) setCategories(data)
+  }
+
+  // Calculate total habit items (groups + ungrouped habits)
+  const getTotalHabitItems = () => {
+    const habitsInGroups = new Set(habits.filter(h => h.group_id).map(h => h.group_id))
+    const ungroupedHabitsCount = habits.filter(h => !h.group_id).length
+    return habitsInGroups.size + ungroupedHabitsCount
+  }
+
+  // Calculate habit completions for a specific date (groups + ungrouped habits)
+  const calculateHabitCompletionsForDate = async (dateStr: string) => {
+    // Get all habit completions for this date
+    const { data: habitCompletions } = await supabase
+      .from('habit_completions')
+      .select('habit_id, completed')
+      .eq('date', dateStr)
+    
+    // Group habits by group_id
+    const habitsByGroup = new Map<string, string[]>()
+    const ungroupedHabits: string[] = []
+    
+    habits.forEach(habit => {
+      if (habit.group_id) {
+        if (!habitsByGroup.has(habit.group_id)) {
+          habitsByGroup.set(habit.group_id, [])
+        }
+        habitsByGroup.get(habit.group_id)!.push(habit.id)
+      } else {
+        ungroupedHabits.push(habit.id)
+      }
+    })
+    
+    // Create a map of habit_id to completion status
+    const completionMap = new Map<string, boolean>()
+    if (habitCompletions) {
+      habitCompletions.forEach(hc => {
+        completionMap.set(hc.habit_id, hc.completed)
+      })
+    }
+    
+    // Check which groups have at least one completed habit
+    const completedGroups = new Set<string>()
+    habitsByGroup.forEach((habitIds, groupId) => {
+      const hasCompleted = habitIds.some(habitId => completionMap.get(habitId) === true)
+      if (hasCompleted) {
+        completedGroups.add(groupId)
+      }
+    })
+    
+    // Count completed ungrouped habits
+    const completedUngrouped = ungroupedHabits.filter(habitId => completionMap.get(habitId) === true).length
+    
+    const totalGroups = habitsByGroup.size
+    const totalUngrouped = ungroupedHabits.length
+    const completed = completedGroups.size + completedUngrouped
+    const total = totalGroups + totalUngrouped
+    
+    return { completed, total }
+  }
+
+  const calculateDailyData = async () => {
+    const today = new Date()
+    const days = []
+    
+    for (let i = 9; i >= 0; i--) {
+      const date = new Date(today)
+      date.setDate(date.getDate() - i)
+      date.setHours(0, 0, 0, 0)
+      const dateStr = date.toISOString().split('T')[0]
+      
+      // Calculate task points for this day
+      let taskPoints = 0
+      const completedTasks = tasks.filter(task => {
+        if (task.sub_tasks && task.sub_tasks.length > 0) {
+          return false
+        }
+        return task.status === 'Complete' && task.completion_date === dateStr
+      })
+      taskPoints = completedTasks.reduce((sum, task) => sum + (task.points ?? 10), 0)
+      
+      // Add points from completed subtasks
+      tasks.forEach(task => {
+        if (task.sub_tasks && task.sub_tasks.length > 0) {
+          task.sub_tasks
+            .filter((st: any) => st.completion_date === dateStr)
+            .forEach((st: any) => {
+              taskPoints += (st.points ?? 0)
+            })
+        }
+      })
+      
+      // Calculate habit completions (groups + ungrouped habits)
+      const habitCompletions = await calculateHabitCompletionsForDate(dateStr)
+      const habitCount = habitCompletions.completed
+      const totalHabits = habitCompletions.total
+      
+      // Calculate average calibration score
+      const { data: calibrationScores } = await supabase
+        .from('calibration_scores')
+        .select('*')
+        .eq('date', dateStr)
+      
+      const avgCalibration = calibrationScores && calibrationScores.length > 0
+        ? calibrationScores.reduce((sum, cs) => sum + cs.score, 0) / calibrationScores.length
+        : 0
+      
+      days.push({
+        date: dateStr,
+        dateLabel: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+        taskPoints,
+        habitCount,
+        totalHabits,
+        avgCalibration
+      })
+    }
+    
+    setDailyData(days)
+  }
+
+  useEffect(() => {
+    const loadAll = async () => {
+      await Promise.all([
+        loadTasks(),
+        loadHabits(),
+        loadHabitGroups(),
+        loadCalibrations(),
+        loadCategories()
+      ])
+    }
+    loadAll()
+  }, [])
+
+  useEffect(() => {
+    if (tasks.length > 0 || habits.length > 0 || habitGroups.length > 0 || calibrations.length > 0) {
+      calculateDailyData()
+    }
+  }, [tasks, habits, habitGroups, calibrations])
+
+  // Task summary calculations
+  const totalTasks = tasks.length
+  const completedTasks = tasks.filter(t => t.status === 'Complete').length
+  const totalPoints = tasks.reduce((sum, t) => sum + (t.points ?? 10), 0)
+  const completedPoints = tasks.reduce((sum, task) => {
+    if (task.sub_tasks && task.sub_tasks.length > 0) {
+      return sum + task.sub_tasks
+        .filter((st: any) => st.completion_date !== null)
+        .reduce((stSum: number, st: any) => stSum + (st.points ?? 0), 0)
+    }
+    return sum + (task.status === 'Complete' ? (task.points ?? 10) : 0)
+  }, 0)
+  
+  // Status breakdown
+  const statusBreakdown = ['Concept', 'To do', 'In progress', 'Waiting', 'On hold', 'Complete', 'Dropped'].map(status => ({
+    status,
+    count: tasks.filter(t => t.status === status).length
+  })).filter(s => s.count > 0)
+
+  // Category breakdown
+  const categoryBreakdown = categories.map(cat => ({
+    category: cat,
+    count: tasks.filter(t => t.category_id === cat.id).length
+  })).filter(c => c.count > 0)
+
+  // Calculate 10-day averages
+  const avgHabitCompletion = dailyData.length > 0 
+    ? dailyData.reduce((sum, d) => sum + d.habitCount, 0) / dailyData.length
+    : 0
+  const avgCalibration = dailyData.length > 0
+    ? dailyData.reduce((sum, d) => sum + d.avgCalibration, 0) / dailyData.length
+    : 0
+  const avgPoints = dailyData.length > 0
+    ? dailyData.reduce((sum, d) => sum + d.taskPoints, 0) / dailyData.length
+    : 0
+
+  // Calculate Overall Score for a specific day
+  const calculateOverallScore = (day: any) => {
+    // Habits completion %
+    const habitsPercent = day.totalHabits > 0 ? (day.habitCount / day.totalHabits) * 100 : 0
+    
+    // Calibration % (out of max 5)
+    const calibrationPercent = (day.avgCalibration / 5) * 100
+    
+    // Tasks % (points earned / total points available, capped at 100)
+    const tasksPercent = totalPoints > 0 ? Math.min(100, (day.taskPoints / totalPoints) * 100) : 0
+    
+    // Average of the three percentages
+    return (habitsPercent + calibrationPercent + tasksPercent) / 3
+  }
+
+  // Calculate 10-day average Overall Score
+  const calculateOverallScoreAverage = () => {
+    if (dailyData.length === 0) return 0
+    const sum = dailyData.reduce((sum, day) => sum + calculateOverallScore(day), 0)
+    return sum / dailyData.length
+  }
+
+  const totalHabitItems = getTotalHabitItems()
+  const maxPoints = dailyData.length > 0 ? Math.max(...dailyData.map(d => d.taskPoints), 10) : 10
+  const maxHabits = dailyData.length > 0 ? Math.max(...dailyData.map(d => d.totalHabits), 1) : 1
+  const totalCalibrations = calibrations.length
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-3xl font-bold" style={{ color: '#11551a' }}>Dashboard</h2>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Tasks Summary */}
+        <div className="bg-white rounded-xl shadow-lg p-5">
+          <h3 className="text-lg font-semibold text-gray-700 mb-3">Tasks</h3>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Total Tasks:</span>
+              <span className="font-bold text-xl">{totalTasks}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Completed:</span>
+              <span className="font-bold text-xl" style={{ color: '#11551a' }}>{completedTasks}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">10-day Avg Points:</span>
+              <span className="font-bold text-xl" style={{ color: '#11551a' }}>{Math.round(avgPoints)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Habits Summary */}
+        <div className="bg-white rounded-xl shadow-lg p-5">
+          <h3 className="text-lg font-semibold text-gray-700 mb-3">Habits</h3>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Total Items:</span>
+              <span className="font-bold text-xl">{totalHabitItems}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">10-day Avg:</span>
+              <span className="font-bold text-xl" style={{ color: '#11551a' }}>
+                {Math.round(avgHabitCompletion)}/{totalHabitItems}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
+              <div 
+                className="h-3 rounded-full transition-all"
+                style={{ 
+                  width: `${totalHabitItems > 0 ? (avgHabitCompletion / totalHabitItems) * 100 : 0}%`,
+                  backgroundColor: '#11551a'
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Calibration Summary */}
+        <div className="bg-white rounded-xl shadow-lg p-5">
+          <h3 className="text-lg font-semibold text-gray-700 mb-3">Calibration</h3>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Total Items:</span>
+              <span className="font-bold text-xl">{totalCalibrations}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">10-day Avg:</span>
+              <span className="font-bold text-xl" style={{ color: '#11551a' }}>
+                {avgCalibration > 0 ? avgCalibration.toFixed(1) : '-'}/5
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
+              <div 
+                className="h-3 rounded-full transition-all"
+                style={{ 
+                  width: `${(avgCalibration / 5) * 100}%`,
+                  backgroundColor: '#11551a'
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Overall Score Summary */}
+        <div className="bg-white rounded-xl shadow-lg p-5">
+          <h3 className="text-lg font-semibold text-gray-700 mb-3">Overall Score</h3>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Yesterday:</span>
+              <span className="font-bold text-2xl" style={{ color: '#11551a' }}>
+                {dailyData.length >= 2 ? Math.round(calculateOverallScore(dailyData[dailyData.length - 2])) : '-'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">10-day Avg:</span>
+              <span className="font-bold text-3xl" style={{ color: '#11551a' }}>
+                {dailyData.length > 0 ? Math.round(calculateOverallScoreAverage()) : '-'}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
+              <div 
+                className="h-3 rounded-full transition-all"
+                style={{ 
+                  width: `${dailyData.length > 0 ? calculateOverallScoreAverage() : 0}%`,
+                  backgroundColor: '#11551a'
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Daily Progress Charts */}
+      <div className="bg-white rounded-xl shadow-lg p-5">
+        <h3 className="text-xl font-bold mb-5" style={{ color: '#11551a' }}>Daily Progress (Last 10 Days)</h3>
+        
+        <div className="space-y-6">
+          {/* Task Points Chart */}
+          <div>
+            <h4 className="text-lg font-semibold text-gray-700 mb-3">Task Points</h4>
+            <div className="flex items-end justify-between gap-2 h-48">
+              {dailyData.map((day, index) => (
+                <div key={index} className="flex-1 flex flex-col items-center">
+                  <div className="w-full flex flex-col items-center justify-end" style={{ height: '180px' }}>
+                    <div
+                      className="w-full rounded-t transition-all hover:opacity-80 cursor-pointer"
+                      style={{
+                        height: `${(day.taskPoints / maxPoints) * 160}px`,
+                        backgroundColor: '#11551a',
+                        minHeight: day.taskPoints > 0 ? '4px' : '0px'
+                      }}
+                      title={`${day.dateLabel}: ${day.taskPoints} points`}
+                    />
+                    <div className="mt-2 text-xs text-gray-600 text-center">
+                      {day.taskPoints}
+                    </div>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500 transform -rotate-45 origin-top-left whitespace-nowrap" style={{ width: '60px' }}>
+                    {day.dateLabel.split(' ')[0]}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Habits Chart */}
+          <div>
+            <h4 className="text-lg font-semibold text-gray-700 mb-3">Habits Completed</h4>
+            <div className="flex items-end justify-between gap-2 h-48">
+              {dailyData.map((day, index) => (
+                <div key={index} className="flex-1 flex flex-col items-center">
+                  <div className="w-full flex flex-col items-center justify-end" style={{ height: '180px' }}>
+                    <div
+                      className="w-full rounded-t transition-all hover:opacity-80 cursor-pointer"
+                      style={{
+                        height: `${maxHabits > 0 ? (day.habitCount / maxHabits) * 160 : 0}px`,
+                        backgroundColor: '#3B82F6',
+                        minHeight: day.habitCount > 0 ? '4px' : '0px'
+                      }}
+                      title={`${day.dateLabel}: ${day.habitCount}/${day.totalHabits} habits`}
+                    />
+                    <div className="mt-2 text-xs text-gray-600 text-center">
+                      {day.habitCount}/{day.totalHabits}
+                    </div>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500 transform -rotate-45 origin-top-left whitespace-nowrap" style={{ width: '60px' }}>
+                    {day.dateLabel.split(' ')[0]}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Calibration Chart */}
+          <div>
+            <h4 className="text-lg font-semibold text-gray-700 mb-3">Average Calibration Score</h4>
+            <div className="flex items-end justify-between gap-2 h-48">
+              {dailyData.map((day, index) => (
+                <div key={index} className="flex-1 flex flex-col items-center">
+                  <div className="w-full flex flex-col items-center justify-end" style={{ height: '180px' }}>
+                    <div
+                      className="w-full rounded-t transition-all hover:opacity-80 cursor-pointer"
+                      style={{
+                        height: `${(day.avgCalibration / 5) * 160}px`,
+                        backgroundColor: '#8B5CF6',
+                        minHeight: day.avgCalibration > 0 ? '4px' : '0px'
+                      }}
+                      title={`${day.dateLabel}: ${day.avgCalibration.toFixed(1)}/5`}
+                    />
+                    <div className="mt-2 text-xs text-gray-600 text-center">
+                      {day.avgCalibration > 0 ? day.avgCalibration.toFixed(1) : '-'}
+                    </div>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500 transform -rotate-45 origin-top-left whitespace-nowrap" style={{ width: '60px' }}>
+                    {day.dateLabel.split(' ')[0]}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Status and Category Breakdown */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl shadow-lg p-5">
+          <h3 className="text-lg font-semibold text-gray-700 mb-4">Tasks by Status</h3>
+          <div className="space-y-2">
+            {statusBreakdown.map(({ status, count }) => (
+              <div key={status} className="flex items-center justify-between">
+                <span className="text-gray-600">{status}:</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-32 bg-gray-200 rounded-full h-4">
+                    <div
+                      className="h-4 rounded-full transition-all"
+                      style={{
+                        width: `${totalTasks > 0 ? (count / totalTasks) * 100 : 0}%`,
+                        backgroundColor: status === 'Complete' ? '#11551a' : '#6B7280'
+                      }}
+                    />
+                  </div>
+                  <span className="font-semibold w-8 text-right">{count}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-5">
+          <h3 className="text-lg font-semibold text-gray-700 mb-4">Tasks by Category</h3>
+          <div className="space-y-2">
+            {categoryBreakdown.map(({ category, count }) => (
+              <div key={category.id} className="flex items-center justify-between">
+                <span className="text-gray-600">{category.name}:</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-32 bg-gray-200 rounded-full h-4">
+                    <div
+                      className="h-4 rounded-full transition-all"
+                      style={{
+                        width: `${totalTasks > 0 ? (count / totalTasks) * 100 : 0}%`,
+                        backgroundColor: category.color
+                      }}
+                    />
+                  </div>
+                  <span className="font-semibold w-8 text-right">{count}</span>
+                </div>
+              </div>
+            ))}
+            {categoryBreakdown.length === 0 && (
+              <p className="text-gray-500 text-center py-4">No categorized tasks</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -686,7 +1214,7 @@ function TasksView() {
   const loadTasks = async () => {
     const { data } = await supabase
       .from('tasks')
-      .select('*, categories(*)')
+      .select('*, categories(*), sub_tasks(*)')
       .order('created_at', { ascending: false })
     if (data) setTasks(data)
   }
@@ -713,6 +1241,7 @@ function TasksView() {
       completion_date: null,
       is_recurring: false,
       recurring_frequency: null,
+      points: 10,
       user_id: user?.id
     })
   }
@@ -728,7 +1257,7 @@ function TasksView() {
     const { data: { user } } = await supabase.auth.getUser()
     
     // Filter out non-updatable fields (id, user_id, created_at, categories from join)
-    const allowedFields = ['title', 'status', 'category_id', 'description', 'due_date', 'is_hard_deadline', 'completion_date', 'is_recurring', 'recurring_frequency']
+    const allowedFields = ['title', 'status', 'category_id', 'description', 'due_date', 'is_hard_deadline', 'completion_date', 'is_recurring', 'recurring_frequency', 'points']
     const filteredUpdates: any = {}
     for (const key of allowedFields) {
       if (key in updates) {
@@ -774,10 +1303,10 @@ function TasksView() {
     if (error) {
       console.error('Full error:', JSON.stringify(error, null, 2))
       alert('Error: ' + (error.message || 'Failed to save task'))
-      return false
+      return null
     } else {
       loadTasks() // This reloads all tasks with categories
-      return true
+      return result.data
     }
   }
 
@@ -801,6 +1330,7 @@ function TasksView() {
         is_hard_deadline: task.is_hard_deadline,
         is_recurring: task.is_recurring,
         recurring_frequency: task.recurring_frequency,
+        points: task.points ?? 10,
         user_id: user?.id
       }
       
@@ -857,6 +1387,39 @@ function TasksView() {
     }
     
     return date.toISOString().split('T')[0]
+  }
+
+  // Calculate today's points from completed tasks and subtasks
+  const getTodayPoints = () => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const todayStr = today.toISOString().split('T')[0]
+    
+    let totalPoints = 0
+    
+    // Add points from completed tasks (only if task itself is completed today and has no subtasks)
+    tasks
+      .filter(task => task.status === 'Complete' && task.completion_date === todayStr)
+      .forEach(task => {
+        // Only count task points if it has no subtasks
+        const hasSubTasks = task.sub_tasks && task.sub_tasks.length > 0
+        if (!hasSubTasks) {
+          totalPoints += (task.points ?? 10)
+        }
+      })
+    
+    // Add points from completed subtasks
+    tasks.forEach(task => {
+      if (task.sub_tasks && task.sub_tasks.length > 0) {
+        task.sub_tasks
+          .filter((st: any) => st.completion_date === todayStr)
+          .forEach((st: any) => {
+            totalPoints += (st.points ?? 0)
+          })
+      }
+    })
+    
+    return totalPoints
   }
 
   // Status order for sorting
@@ -967,6 +1530,30 @@ function TasksView() {
       return baseTasks.length
     }
     return baseTasks.filter(t => t.category_id === categoryId).length
+  }
+
+  // Calculate completed points for a task
+  const getCompletedPoints = (task: any): number => {
+    if (task.sub_tasks && task.sub_tasks.length > 0) {
+      // Sum points from completed subtasks
+      return task.sub_tasks
+        .filter((st: any) => st.completion_date !== null)
+        .reduce((sum: number, st: any) => sum + (st.points ?? 0), 0)
+    } else {
+      // If no subtasks, task is either fully completed (points) or not (0)
+      return task.status === 'Complete' ? (task.points ?? 10) : 0
+    }
+  }
+
+  // Get total points for a task
+  const getTotalPoints = (task: any): number => {
+    return task.points ?? 10
+  }
+
+  // Calculate completed subtasks count
+  const getCompletedSubtasksCount = (task: any): number => {
+    if (!task.sub_tasks || task.sub_tasks.length === 0) return 0
+    return task.sub_tasks.filter((st: any) => st.completion_date !== null).length
   }
 
   // Get base tasks for counting (apply other filters but not the one being counted)
@@ -1169,7 +1756,12 @@ function TasksView() {
       {!selectedTask && (
         <div className="bg-white rounded-xl shadow-lg p-4">
           <div className="flex justify-between items-center mb-3">
-            <h2 className="text-2xl font-bold" style={{ color: '#11551a' }}>My Tasks</h2>
+            <div>
+              <h2 className="text-2xl font-bold" style={{ color: '#11551a' }}>My Tasks</h2>
+              <div className="text-base text-gray-600 mt-1">
+                Today's Points: <span className="font-semibold" style={{ color: '#11551a' }}>{getTodayPoints()}</span>
+              </div>
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowCategoryManager(true)}
@@ -1512,9 +2104,20 @@ function TasksView() {
                               {(task.is_recurring === true || task.is_recurring === 'true') && (
                                 <span className="text-base" title="Recurring task">🔁</span>
                               )}
+                              {task.sub_tasks && task.sub_tasks.length > 0 && (
+                                <span className="text-base" title={`${task.sub_tasks.length} subtask${task.sub_tasks.length > 1 ? 's' : ''}`}>📋</span>
+                              )}
                             </div>
-                            <div className="mt-1 text-sm text-gray-500">
-                              {task.status}
+                            <div className="mt-1 text-sm text-gray-500 flex items-center gap-2">
+                              <span>{task.status}</span>
+                              <span className="text-gray-400">•</span>
+                              <span>Points: {getCompletedPoints(task)}/{getTotalPoints(task)}</span>
+                              {task.sub_tasks && task.sub_tasks.length > 0 && (
+                                <>
+                                  <span className="text-gray-400">•</span>
+                                  <span>Subtasks: {getCompletedSubtasksCount(task)}/{task.sub_tasks.length}</span>
+                                </>
+                              )}
                             </div>
                           </div>
                           {task.categories && (
@@ -1588,6 +2191,17 @@ function TasksView() {
                             <span className="text-lg" title="Recurring task">🔁</span>
                           )}
                         </div>
+                        <div className="mt-1 text-base text-gray-500 flex items-center gap-2">
+                          <span>{task.status}</span>
+                          <span className="text-gray-400">•</span>
+                          <span>Points: {getCompletedPoints(task)}/{getTotalPoints(task)}</span>
+                          {task.sub_tasks && task.sub_tasks.length > 0 && (
+                            <>
+                              <span className="text-gray-400">•</span>
+                              <span>Subtasks: {getCompletedSubtasksCount(task)}/{task.sub_tasks.length}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                       {task.categories && (
                         <span
@@ -1650,15 +2264,71 @@ function TasksView() {
 function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowCategories }: any) {
   const [editedTask, setEditedTask] = useState(task)
   const [showRecurringModal, setShowRecurringModal] = useState(false)
+  const [showCompleteModal, setShowCompleteModal] = useState(false)
+  const [subTasks, setSubTasks] = useState<any[]>([])
+  const supabase = createClient()
+
+  const loadSubTasks = useCallback(async () => {
+    if (!task?.id) return
+    const { data } = await supabase
+      .from('sub_tasks')
+      .select('*')
+      .eq('task_id', task.id)
+      .order('sort_order', { ascending: true })
+    if (data) setSubTasks(data)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task?.id])
 
   // Update editedTask when task prop changes
   useEffect(() => {
     setEditedTask(task)
-  }, [task])
+    if (task?.id) {
+      loadSubTasks()
+    } else {
+      setSubTasks([])
+    }
+  }, [task, loadSubTasks])
+
+  // Distribute points evenly across subtasks
+  const distributePoints = (totalPoints: number, numSubTasks: number): number[] => {
+    if (numSubTasks === 0) return []
+    const basePoints = Math.floor(totalPoints / numSubTasks)
+    const remainder = totalPoints % numSubTasks
+    const points: number[] = []
+    for (let i = 0; i < numSubTasks; i++) {
+      points.push(basePoints + (i < remainder ? 1 : 0))
+    }
+    return points
+  }
+
+  // Calculate point balance
+  const getPointBalance = () => {
+    const totalPoints = editedTask.points ?? 10
+    const subTaskPoints = subTasks.reduce((sum, st) => sum + (st.points ?? 0), 0)
+    return totalPoints - subTaskPoints
+  }
 
   const handleSave = async () => {
-    const success = await onUpdate(task.id, editedTask)
-    if (success) {
+    const savedTask = await onUpdate(task.id, editedTask)
+    if (savedTask) {
+      // If this was a new task, we need to save subtasks
+      if (task.id === null && subTasks.length > 0) {
+        const newTaskId = savedTask.id
+        
+        // Save all subtasks with their current points (may have been manually adjusted)
+        for (let i = 0; i < subTasks.length; i++) {
+          await supabase
+            .from('sub_tasks')
+            .insert({
+              task_id: newTaskId,
+              title: subTasks[i].title || '',
+              due_date: subTasks[i].due_date || null,
+              completion_date: subTasks[i].completion_date || null,
+              points: subTasks[i].points || 0,
+              sort_order: subTasks[i].sort_order !== undefined ? subTasks[i].sort_order : i
+            })
+        }
+      }
       onClose() // Close the detail view after successful save
     }
   }
@@ -1668,6 +2338,49 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
       onDelete(task.id)
       onClose()
     }
+  }
+
+  const handleComplete = async () => {
+    if (!task.id) return
+    
+    const today = new Date().toISOString().split('T')[0]
+    
+    // Mark task as complete
+    const updatedTask = await onUpdate(task.id, {
+      status: 'Complete',
+      completion_date: today
+    })
+    
+    // Update editedTask state
+    if (updatedTask) {
+      setEditedTask({
+        ...editedTask,
+        status: 'Complete',
+        completion_date: today
+      })
+    }
+    
+    // Mark all incomplete subtasks as complete
+    const updatePromises = subTasks.map(async (st: any) => {
+      if (!st.completion_date) {
+        // Update in database if it exists
+        if (st.id) {
+          await supabase
+            .from('sub_tasks')
+            .update({ completion_date: today })
+            .eq('id', st.id)
+        }
+        // Update local state
+        return { ...st, completion_date: today }
+      }
+      return st
+    })
+    const updatedSubtasks = await Promise.all(updatePromises)
+    setSubTasks(updatedSubtasks)
+    
+    // Reload subtasks to reflect database changes
+    await loadSubTasks()
+    setShowCompleteModal(false)
   }
 
   const statuses = ['Concept', 'To do', 'In progress', 'Waiting', 'On hold', 'Complete', 'Dropped']
@@ -1686,15 +2399,20 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
             Categories
           </button>
           {!isNewTask && (
-            <button
-              onClick={handleDelete}
-              className="text-white px-3 py-1.5 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-              style={{ backgroundColor: '#f56714' }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e55d13')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f56714')}
-            >
-              Delete
-            </button>
+            <>
+              <button
+                onClick={handleDelete}
+                className="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setShowCompleteModal(true)}
+                className="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
+              >
+                Complete
+              </button>
+            </>
           )}
           <button
             onClick={onClose}
@@ -1704,10 +2422,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
           </button>
           <button
             onClick={handleSave}
-            className="text-white px-3 py-1.5 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-            style={{ backgroundColor: '#f6d413' }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e5c312')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f6d413')}
+            className="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
           >
             Save
           </button>
@@ -1773,6 +2488,312 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
             className="w-full h-24 px-3 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 transition-all"
           />
         </div>
+
+        {/* Points */}
+        <div>
+          <label className="block text-lg font-medium text-gray-700 mb-1">
+            Points
+          </label>
+          <input
+            type="number"
+            min="1"
+            value={editedTask.points ?? 10}
+            onChange={(e) => setEditedTask({ ...editedTask, points: parseInt(e.target.value) || 10 })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all"
+          />
+          <p className="text-lg text-gray-500 mt-1">
+            Points awarded when this task is completed (default: 10)
+          </p>
+        </div>
+
+        {/* Subtasks */}
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <label className="block text-lg font-medium text-gray-700">
+              Subtasks
+            </label>
+            <button
+              onClick={async () => {
+                const totalPoints = editedTask.points ?? 10
+                const newSubTasks = [...subTasks]
+                const newSortOrder = newSubTasks.length > 0 
+                  ? Math.max(...newSubTasks.map(st => st.sort_order || 0)) + 1 
+                  : 0
+                
+                // Distribute points including the new one
+                const distributedPoints = distributePoints(totalPoints, newSubTasks.length + 1)
+                
+                // For existing tasks, save to database immediately
+                if (task.id) {
+                  // Create new subtask in database
+                  const { data: newSubTask, error } = await supabase
+                    .from('sub_tasks')
+                    .insert({
+                      task_id: task.id,
+                      title: '',
+                      due_date: editedTask.due_date || null,
+                      completion_date: null,
+                      points: distributedPoints[newSubTasks.length],
+                      sort_order: newSortOrder
+                    })
+                    .select()
+                    .single()
+                  
+                  if (error) {
+                    console.error('Error creating subtask:', error)
+                    alert('Error creating subtask: ' + error.message)
+                    return
+                  }
+                  
+                  // Update existing subtasks with new point distribution
+                  for (let i = 0; i < newSubTasks.length; i++) {
+                    if (newSubTasks[i].id && newSubTasks[i].points !== distributedPoints[i]) {
+                      await supabase
+                        .from('sub_tasks')
+                        .update({ points: distributedPoints[i] })
+                        .eq('id', newSubTasks[i].id)
+                      newSubTasks[i].points = distributedPoints[i]
+                    } else if (!newSubTasks[i].id) {
+                      newSubTasks[i].points = distributedPoints[i]
+                    }
+                  }
+                  
+                  newSubTasks.push(newSubTask)
+                  setSubTasks(newSubTasks)
+                } else {
+                  // For new tasks, just add to local state
+                  const newSubTask = {
+                    id: null,
+                    task_id: null,
+                    title: '',
+                    due_date: editedTask.due_date || null,
+                    completion_date: null,
+                    points: distributedPoints[newSubTasks.length],
+                    sort_order: newSortOrder
+                  }
+                  
+                  // Update existing subtasks with new point distribution
+                  for (let i = 0; i < newSubTasks.length; i++) {
+                    newSubTasks[i].points = distributedPoints[i]
+                  }
+                  
+                  newSubTasks.push(newSubTask)
+                  setSubTasks(newSubTasks)
+                }
+              }}
+              className="text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              style={{ backgroundColor: '#11551a' }}
+            >
+              + Add Subtask
+            </button>
+          </div>
+            
+            {subTasks.length > 0 && (
+              <>
+                <div className="space-y-3 mb-3">
+                  {subTasks.map((subTask, index) => (
+                    <div key={subTask.id || `new-${index}`} className="border border-gray-300 rounded-lg p-3 bg-gray-50">
+                      {/* Title with checkbox */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Title
+                          </label>
+                          <input
+                            type="text"
+                            value={subTask.title || ''}
+                            onChange={async (e) => {
+                              const updated = [...subTasks]
+                              updated[index].title = e.target.value
+                              setSubTasks(updated)
+                              
+                              // Save if it's an existing subtask
+                              if (subTask.id) {
+                                await supabase
+                                  .from('sub_tasks')
+                                  .update({ title: e.target.value })
+                                  .eq('id', subTask.id)
+                              }
+                            }}
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all text-base"
+                          />
+                        </div>
+                        <div className="flex items-end pb-1">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={subTask.completion_date !== null}
+                              onChange={async (e) => {
+                                const today = new Date().toISOString().split('T')[0]
+                                const updated = [...subTasks]
+                                updated[index].completion_date = e.target.checked ? today : null
+                                setSubTasks(updated)
+                                
+                                if (subTask.id) {
+                                  await supabase
+                                    .from('sub_tasks')
+                                    .update({ completion_date: e.target.checked ? today : null })
+                                    .eq('id', subTask.id)
+                                }
+                              }}
+                              className="w-5 h-5 cursor-pointer"
+                              style={{ accentColor: '#11551a' }}
+                            />
+                            <span className="text-sm text-gray-700">Complete</span>
+                          </label>
+                        </div>
+                      </div>
+                      
+                      {/* Due Date, Completion Date, Points in three columns */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Due Date
+                          </label>
+                          <input
+                            type="date"
+                            value={subTask.due_date || ''}
+                            max={editedTask.due_date || undefined}
+                            onChange={async (e) => {
+                              const value = e.target.value
+                              // Validate: cannot be after main task due date
+                              if (editedTask.due_date && value > editedTask.due_date) {
+                                alert('Subtask due date cannot be after the main task due date')
+                                return
+                              }
+                              
+                              const updated = [...subTasks]
+                              updated[index].due_date = value || null
+                              setSubTasks(updated)
+                              
+                              if (subTask.id) {
+                                const { error } = await supabase
+                                  .from('sub_tasks')
+                                  .update({ due_date: value || null })
+                                  .eq('id', subTask.id)
+                                if (error) {
+                                  console.error('Error updating subtask:', error)
+                                  alert('Error updating subtask: ' + error.message)
+                                }
+                              }
+                            }}
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer text-base"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Completion Date
+                          </label>
+                          <input
+                            type="date"
+                            value={subTask.completion_date || ''}
+                            onChange={async (e) => {
+                              const updated = [...subTasks]
+                              updated[index].completion_date = e.target.value || null
+                              setSubTasks(updated)
+                              
+                              if (subTask.id) {
+                                await supabase
+                                  .from('sub_tasks')
+                                  .update({ completion_date: e.target.value || null })
+                                  .eq('id', subTask.id)
+                              }
+                            }}
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer text-base"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Points
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={subTask.points ?? 0}
+                            onChange={async (e) => {
+                              const value = Math.max(0, parseInt(e.target.value) || 0)
+                              const updated = [...subTasks]
+                              updated[index].points = value
+                              setSubTasks(updated)
+                              
+                              if (subTask.id) {
+                                await supabase
+                                  .from('sub_tasks')
+                                  .update({ points: value })
+                                  .eq('id', subTask.id)
+                              }
+                            }}
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all text-base"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="mt-2 flex justify-end">
+                        <button
+                          onClick={async () => {
+                            if (subTask.id) {
+                              await supabase
+                                .from('sub_tasks')
+                                .delete()
+                                .eq('id', subTask.id)
+                            }
+                            
+                            const updated = subTasks.filter((_, i) => i !== index)
+                            
+                            // Redistribute points
+                            const totalPoints = editedTask.points ?? 10
+                            const distributedPoints = distributePoints(totalPoints, updated.length)
+                            updated.forEach((st, idx) => {
+                              st.points = distributedPoints[idx] || 0
+                              if (st.id) {
+                                supabase
+                                  .from('sub_tasks')
+                                  .update({ points: distributedPoints[idx] || 0 })
+                                  .eq('id', st.id)
+                              }
+                            })
+                            
+                            setSubTasks(updated)
+                          }}
+                          className="text-red-600 hover:text-red-800 text-sm font-medium cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Point Balance Display */}
+                <div className={`p-3 rounded-lg ${getPointBalance() === 0 ? 'bg-green-50 text-green-800' : 'bg-yellow-50 text-yellow-800'}`}>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-base">
+                      Point Balance:
+                    </span>
+                    <span className={`font-bold text-lg ${getPointBalance() === 0 ? 'text-green-700' : 'text-yellow-700'}`}>
+                      {getPointBalance() > 0 ? `+${getPointBalance()}` : getPointBalance()}
+                    </span>
+                  </div>
+                  {getPointBalance() !== 0 && (
+                    <p className="text-sm mt-1">
+                      Adjust subtask points so the total equals {editedTask.points ?? 10} points
+                    </p>
+                  )}
+                  {getPointBalance() === 0 && (
+                    <p className="text-sm mt-1">
+                      All points are distributed correctly
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+            
+            {subTasks.length === 0 && (
+              <p className="text-gray-500 text-base">No subtasks yet. Click "Add Subtask" to create one.</p>
+            )}
+          </div>
 
         {/* Due Date */}
         <div>
@@ -1858,6 +2879,45 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
             setShowRecurringModal(false)
           }}
         />
+      )}
+
+      {/* Complete Confirmation Modal */}
+      {showCompleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-5 max-w-md w-full">
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="text-xl font-bold" style={{ color: '#11551a' }}>Confirm task is complete</h3>
+              <button
+                onClick={() => setShowCompleteModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-3xl font-light cursor-pointer transition-colors"
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="text-base text-gray-700 mb-5">
+              This will mark the task and all incomplete subtasks as complete with today's date.
+            </p>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowCompleteModal(false)}
+                className="bg-gray-500 text-white px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleComplete}
+                className="text-white px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                style={{ backgroundColor: '#11551a' }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1a7a28')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
