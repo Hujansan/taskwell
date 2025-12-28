@@ -66,3 +66,5 @@ CREATE POLICY "Users can delete sub-tasks for their own tasks"
 CREATE INDEX IF NOT EXISTS idx_sub_tasks_task_id ON sub_tasks(task_id);
 CREATE INDEX IF NOT EXISTS idx_sub_tasks_sort_order ON sub_tasks(sort_order);
 
+
+

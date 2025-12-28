@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
+import Image from 'next/image'
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null)
@@ -14,6 +15,7 @@ export default function Home() {
   const [authView, setAuthView] = useState<'signin' | 'signup' | 'forgot' | 'reset'>('signin')
   const [view, setView] = useState<'dashboard' | 'tasks' | 'journal' | 'settings'>('dashboard')
   const [showChangePassword, setShowChangePassword] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const supabase = createClient()
 
@@ -317,11 +319,15 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 py-3">
           {/* Desktop Layout */}
           <div className="hidden md:flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xl font-bold" style={{ backgroundColor: '#11551a' }}>
-                P
-              </div>
-              <h1 className="text-3xl font-bold" style={{ color: '#11551a' }}>Productivity & Wellness</h1>
+            <div className="flex items-center">
+              <Image 
+                src="/taskwell-logo.png" 
+                alt="Taskwell" 
+                height={48}
+                width={200}
+                className="h-12 w-auto"
+                priority
+              />
             </div>
             <div className="flex gap-2 items-center">
               <button
@@ -414,57 +420,103 @@ export default function Home() {
 
           {/* Mobile Layout */}
           <div className="md:hidden">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xl font-bold" style={{ backgroundColor: '#11551a' }}>
-                P
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Image 
+                  src="/taskwell-logo.png" 
+                  alt="Taskwell" 
+                  height={40}
+                  width={167}
+                  className="h-10 w-auto"
+                  priority
+                />
               </div>
-              <h1 className="text-2xl font-bold" style={{ color: '#11551a' }}>Productivity & Wellness</h1>
-            </div>
-            <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => setView('dashboard')}
-                className={`flex-1 min-w-[80px] px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
-                  view === 'dashboard' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
-                }`}
-                style={view === 'dashboard' ? { backgroundColor: '#11551a' } : {}}
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 rounded-lg transition-all duration-200 active:scale-[0.95] cursor-pointer"
+                style={{ backgroundColor: mobileMenuOpen ? '#11551a' : '#f0f0f0' }}
+                aria-label="Toggle menu"
               >
-                Dashboard
-              </button>
-              <button
-                onClick={() => setView('tasks')}
-                className={`flex-1 min-w-[80px] px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
-                  view === 'tasks' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
-                }`}
-                style={view === 'tasks' ? { backgroundColor: '#11551a' } : {}}
-              >
-                Tasks
-              </button>
-              <button
-                onClick={() => setView('journal')}
-                className={`flex-1 min-w-[80px] px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
-                  view === 'journal' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
-                }`}
-                style={view === 'journal' ? { backgroundColor: '#11551a' } : {}}
-              >
-                Journal
-              </button>
-              <button
-                onClick={() => setView('settings')}
-                className={`flex-1 min-w-[80px] px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
-                  view === 'settings' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
-                }`}
-                style={view === 'settings' ? { backgroundColor: '#11551a' } : {}}
-              >
-                Settings
-              </button>
-              <button
-                onClick={handleSignOut}
-                className="flex-1 min-w-[80px] text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer"
-                style={{ backgroundColor: '#f56714' }}
-              >
-                Sign Out
+                <svg
+                  className="w-6 h-6"
+                  style={{ color: mobileMenuOpen ? '#ffffff' : '#11551a' }}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  {mobileMenuOpen ? (
+                    <path d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path d="M4 6h16M4 12h16M4 18h16" />
+                  )}
+                </svg>
               </button>
             </div>
+            {mobileMenuOpen && (
+              <div className="mt-3 space-y-2 mobile-menu-enter">
+                <button
+                  onClick={() => {
+                    setView('dashboard')
+                    setMobileMenuOpen(false)
+                  }}
+                  className={`w-full px-4 py-2.5 rounded-lg text-base font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+                    view === 'dashboard' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                  }`}
+                  style={view === 'dashboard' ? { backgroundColor: '#11551a' } : {}}
+                >
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => {
+                    setView('tasks')
+                    setMobileMenuOpen(false)
+                  }}
+                  className={`w-full px-4 py-2.5 rounded-lg text-base font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+                    view === 'tasks' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                  }`}
+                  style={view === 'tasks' ? { backgroundColor: '#11551a' } : {}}
+                >
+                  Tasks
+                </button>
+                <button
+                  onClick={() => {
+                    setView('journal')
+                    setMobileMenuOpen(false)
+                  }}
+                  className={`w-full px-4 py-2.5 rounded-lg text-base font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+                    view === 'journal' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                  }`}
+                  style={view === 'journal' ? { backgroundColor: '#11551a' } : {}}
+                >
+                  Journal
+                </button>
+                <button
+                  onClick={() => {
+                    setView('settings')
+                    setMobileMenuOpen(false)
+                  }}
+                  className={`w-full px-4 py-2.5 rounded-lg text-base font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+                    view === 'settings' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                  }`}
+                  style={view === 'settings' ? { backgroundColor: '#11551a' } : {}}
+                >
+                  Settings
+                </button>
+                <button
+                  onClick={() => {
+                    handleSignOut()
+                    setMobileMenuOpen(false)
+                  }}
+                  className="w-full text-white px-4 py-2.5 rounded-lg text-base font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                  style={{ backgroundColor: '#f56714' }}
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </nav>
@@ -686,9 +738,15 @@ function DashboardView() {
         ? calibrationScores.reduce((sum, cs) => sum + cs.score, 0) / calibrationScores.length
         : 0
       
+      // Format date as "Fri 19 Dec", "Tue 6 Jan" etc.
+      const weekday = date.toLocaleDateString('en-US', { weekday: 'short' }).replace(',', '').trim()
+      const day = date.getDate()
+      const month = date.toLocaleDateString('en-US', { month: 'short' })
+      const dateLabel = `${weekday} ${day} ${month}`
+      
       days.push({
         date: dateStr,
-        dateLabel: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+        dateLabel,
         taskPoints,
         habitCount,
         totalHabits,
@@ -787,6 +845,34 @@ function DashboardView() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Overall Score Summary */}
+        <div className="bg-white rounded-xl shadow-lg p-5">
+          <h3 className="text-lg font-semibold text-gray-700 mb-3">Overall Score</h3>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Yesterday:</span>
+              <span className="font-bold text-2xl" style={{ color: '#11551a' }}>
+                {dailyData.length >= 2 ? Math.round(calculateOverallScore(dailyData[dailyData.length - 2])) : '-'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">10-day Avg:</span>
+              <span className="font-bold text-3xl" style={{ color: '#11551a' }}>
+                {dailyData.length > 0 ? Math.round(calculateOverallScoreAverage()) : '-'}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
+              <div 
+                className="h-3 rounded-full transition-all"
+                style={{ 
+                  width: `${dailyData.length > 0 ? calculateOverallScoreAverage() : 0}%`,
+                  backgroundColor: '#11551a'
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Tasks Summary */}
         <div className="bg-white rounded-xl shadow-lg p-5">
           <h3 className="text-lg font-semibold text-gray-700 mb-3">Tasks</h3>
@@ -857,45 +943,18 @@ function DashboardView() {
             </div>
           </div>
         </div>
-
-        {/* Overall Score Summary */}
-        <div className="bg-white rounded-xl shadow-lg p-5">
-          <h3 className="text-lg font-semibold text-gray-700 mb-3">Overall Score</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Yesterday:</span>
-              <span className="font-bold text-2xl" style={{ color: '#11551a' }}>
-                {dailyData.length >= 2 ? Math.round(calculateOverallScore(dailyData[dailyData.length - 2])) : '-'}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">10-day Avg:</span>
-              <span className="font-bold text-3xl" style={{ color: '#11551a' }}>
-                {dailyData.length > 0 ? Math.round(calculateOverallScoreAverage()) : '-'}
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
-              <div 
-                className="h-3 rounded-full transition-all"
-                style={{ 
-                  width: `${dailyData.length > 0 ? calculateOverallScoreAverage() : 0}%`,
-                  backgroundColor: '#11551a'
-                }}
-              />
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Daily Progress Charts */}
-      <div className="bg-white rounded-xl shadow-lg p-5">
+      <div className="bg-white rounded-xl shadow-lg p-3 md:p-5">
         <h3 className="text-xl font-bold mb-5" style={{ color: '#11551a' }}>Daily Progress (Last 10 Days)</h3>
         
         <div className="space-y-6">
           {/* Task Points Chart */}
           <div>
             <h4 className="text-lg font-semibold text-gray-700 mb-3">Task Points</h4>
-            <div className="flex items-end justify-between gap-2 h-48">
+            {/* Desktop: Horizontal bars */}
+            <div className="hidden md:flex items-end justify-between gap-2 h-48">
               {dailyData.map((day, index) => (
                 <div key={index} className="flex-1 flex flex-col items-center">
                   <div className="w-full flex flex-col items-center justify-end" style={{ height: '180px' }}>
@@ -912,8 +971,32 @@ function DashboardView() {
                       {day.taskPoints}
                     </div>
                   </div>
-                  <div className="mt-2 text-xs text-gray-500 transform -rotate-45 origin-top-left whitespace-nowrap" style={{ width: '60px' }}>
-                    {day.dateLabel.split(' ')[0]}
+                  <div className="mt-2 text-xs text-gray-500 text-center whitespace-nowrap">
+                    {day.dateLabel}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Mobile: Vertical bars with dates on left */}
+            <div className="md:hidden space-y-2">
+              {dailyData.slice().reverse().map((day, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="w-20 text-[10px] text-gray-500 flex-shrink-0">
+                    {day.dateLabel}
+                  </div>
+                  <div className="text-xs text-gray-600 w-10 flex-shrink-0 text-right">
+                    {day.taskPoints}
+                  </div>
+                  <div className="flex-1 h-6 bg-gray-200 rounded relative overflow-hidden">
+                    <div
+                      className="h-full rounded transition-all"
+                      style={{
+                        width: `${(day.taskPoints / maxPoints) * 100}%`,
+                        backgroundColor: '#11551a',
+                        minWidth: day.taskPoints > 0 ? '2px' : '0px'
+                      }}
+                      title={`${day.dateLabel}: ${day.taskPoints} points`}
+                    />
                   </div>
                 </div>
               ))}
@@ -923,7 +1006,8 @@ function DashboardView() {
           {/* Habits Chart */}
           <div>
             <h4 className="text-lg font-semibold text-gray-700 mb-3">Habits Completed</h4>
-            <div className="flex items-end justify-between gap-2 h-48">
+            {/* Desktop: Horizontal bars */}
+            <div className="hidden md:flex items-end justify-between gap-2 h-48">
               {dailyData.map((day, index) => (
                 <div key={index} className="flex-1 flex flex-col items-center">
                   <div className="w-full flex flex-col items-center justify-end" style={{ height: '180px' }}>
@@ -940,8 +1024,32 @@ function DashboardView() {
                       {day.habitCount}/{day.totalHabits}
                     </div>
                   </div>
-                  <div className="mt-2 text-xs text-gray-500 transform -rotate-45 origin-top-left whitespace-nowrap" style={{ width: '60px' }}>
-                    {day.dateLabel.split(' ')[0]}
+                  <div className="mt-2 text-xs text-gray-500 text-center whitespace-nowrap">
+                    {day.dateLabel}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Mobile: Vertical bars with dates on left */}
+            <div className="md:hidden space-y-2">
+              {dailyData.slice().reverse().map((day, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="w-20 text-[10px] text-gray-500 flex-shrink-0">
+                    {day.dateLabel}
+                  </div>
+                  <div className="text-xs text-gray-600 w-12 flex-shrink-0 text-right">
+                    {day.habitCount}/{day.totalHabits}
+                  </div>
+                  <div className="flex-1 h-6 bg-gray-200 rounded relative overflow-hidden">
+                    <div
+                      className="h-full rounded transition-all"
+                      style={{
+                        width: `${maxHabits > 0 ? (day.habitCount / maxHabits) * 100 : 0}%`,
+                        backgroundColor: '#3B82F6',
+                        minWidth: day.habitCount > 0 ? '2px' : '0px'
+                      }}
+                      title={`${day.dateLabel}: ${day.habitCount}/${day.totalHabits} habits`}
+                    />
                   </div>
                 </div>
               ))}
@@ -951,7 +1059,8 @@ function DashboardView() {
           {/* Calibration Chart */}
           <div>
             <h4 className="text-lg font-semibold text-gray-700 mb-3">Average Calibration Score</h4>
-            <div className="flex items-end justify-between gap-2 h-48">
+            {/* Desktop: Horizontal bars */}
+            <div className="hidden md:flex items-end justify-between gap-2 h-48">
               {dailyData.map((day, index) => (
                 <div key={index} className="flex-1 flex flex-col items-center">
                   <div className="w-full flex flex-col items-center justify-end" style={{ height: '180px' }}>
@@ -968,8 +1077,32 @@ function DashboardView() {
                       {day.avgCalibration > 0 ? day.avgCalibration.toFixed(1) : '-'}
                     </div>
                   </div>
-                  <div className="mt-2 text-xs text-gray-500 transform -rotate-45 origin-top-left whitespace-nowrap" style={{ width: '60px' }}>
-                    {day.dateLabel.split(' ')[0]}
+                  <div className="mt-2 text-xs text-gray-500 text-center whitespace-nowrap">
+                    {day.dateLabel}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Mobile: Vertical bars with dates on left */}
+            <div className="md:hidden space-y-2">
+              {dailyData.slice().reverse().map((day, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="w-20 text-[10px] text-gray-500 flex-shrink-0">
+                    {day.dateLabel}
+                  </div>
+                  <div className="text-xs text-gray-600 w-10 flex-shrink-0 text-right">
+                    {day.avgCalibration > 0 ? day.avgCalibration.toFixed(1) : '-'}
+                  </div>
+                  <div className="flex-1 h-6 bg-gray-200 rounded relative overflow-hidden">
+                    <div
+                      className="h-full rounded transition-all"
+                      style={{
+                        width: `${(day.avgCalibration / 5) * 100}%`,
+                        backgroundColor: '#8B5CF6',
+                        minWidth: day.avgCalibration > 0 ? '2px' : '0px'
+                      }}
+                      title={`${day.dateLabel}: ${day.avgCalibration.toFixed(1)}/5`}
+                    />
                   </div>
                 </div>
               ))}
