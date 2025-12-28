@@ -320,14 +320,20 @@ export default function Home() {
           {/* Desktop Layout */}
           <div className="hidden md:flex justify-between items-center">
             <div className="flex items-center">
-              <Image 
-                src="/taskwell-logo.png" 
-                alt="Taskwell" 
-                height={48}
-                width={200}
-                className="h-12 w-auto"
-                priority
-              />
+              <button
+                onClick={() => setView('dashboard')}
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                aria-label="Go to Dashboard"
+              >
+                <Image 
+                  src="/taskwell-logo.png" 
+                  alt="Taskwell" 
+                  height={48}
+                  width={200}
+                  className="h-12 w-auto"
+                  priority
+                />
+              </button>
             </div>
             <div className="flex gap-2 items-center">
               <button
@@ -422,14 +428,23 @@ export default function Home() {
           <div className="md:hidden">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <Image 
-                  src="/taskwell-logo.png" 
-                  alt="Taskwell" 
-                  height={40}
-                  width={167}
-                  className="h-10 w-auto"
-                  priority
-                />
+                <button
+                  onClick={() => {
+                    setView('dashboard')
+                    setMobileMenuOpen(false)
+                  }}
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                  aria-label="Go to Dashboard"
+                >
+                  <Image 
+                    src="/taskwell-logo.png" 
+                    alt="Taskwell" 
+                    height={40}
+                    width={167}
+                    className="h-10 w-auto"
+                    priority
+                  />
+                </button>
               </div>
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -1331,13 +1346,52 @@ function TasksView() {
   const [categories, setCategories] = useState<any[]>([])
   const [selectedTask, setSelectedTask] = useState<any>(null)
   const [showCategoryManager, setShowCategoryManager] = useState(false)
-  const [sortBy, setSortBy] = useState<'due_date' | 'status'>('due_date')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  const [statusFilters, setStatusFilters] = useState<Set<string>>(new Set())
-  const [dateFilter, setDateFilter] = useState<string>('All')
-  const [categoryFilters, setCategoryFilters] = useState<Set<string>>(new Set(['All']))
+  
+  // Load saved state from localStorage
+  const loadSavedState = () => {
+    if (typeof window === 'undefined') return null
+    try {
+      const saved = localStorage.getItem('tasksViewState')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        return {
+          sortBy: parsed.sortBy || 'due_date',
+          sortOrder: parsed.sortOrder || 'desc',
+          statusFilters: new Set(parsed.statusFilters || []),
+          dateFilter: parsed.dateFilter || 'All',
+          categoryFilters: new Set(parsed.categoryFilters || ['All'])
+        }
+      }
+    } catch (e) {
+      console.error('Error loading saved state:', e)
+    }
+    return null
+  }
+
+  const savedState = loadSavedState()
+  const [sortBy, setSortBy] = useState<'due_date' | 'status'>(savedState?.sortBy || 'due_date')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(savedState?.sortOrder || 'desc')
+  const [statusFilters, setStatusFilters] = useState<Set<string>>(savedState?.statusFilters || new Set())
+  const [dateFilter, setDateFilter] = useState<string>(savedState?.dateFilter || 'All')
+  const [categoryFilters, setCategoryFilters] = useState<Set<string>>(savedState?.categoryFilters || new Set(['All']))
   const [mobileFilterTab, setMobileFilterTab] = useState<'Status' | 'Date' | 'Category' | 'Sort'>('Status')
   const supabase = createClient()
+
+  // Save state to localStorage whenever filters/sorts change
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      localStorage.setItem('tasksViewState', JSON.stringify({
+        sortBy,
+        sortOrder,
+        statusFilters: Array.from(statusFilters),
+        dateFilter,
+        categoryFilters: Array.from(categoryFilters)
+      }))
+    } catch (e) {
+      console.error('Error saving state:', e)
+    }
+  }, [sortBy, sortOrder, statusFilters, dateFilter, categoryFilters])
 
   useEffect(() => {
     loadTasks()
@@ -3434,7 +3488,23 @@ function CategoryManager({ categories: initialCategories, onClose }: any) {
 
 function JournalView() {
   const [entries, setEntries] = useState<any[]>([])
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  
+  // Load saved date from localStorage
+  const loadSavedDate = () => {
+    if (typeof window === 'undefined') return null
+    try {
+      const saved = localStorage.getItem('journalSelectedDate')
+      if (saved) {
+        return saved
+      }
+    } catch (e) {
+      console.error('Error loading saved date:', e)
+    }
+    return null
+  }
+
+  const savedDate = loadSavedDate()
+  const [selectedDate, setSelectedDate] = useState(savedDate || new Date().toISOString().split('T')[0])
   const [content, setContent] = useState('')
   const [isEditing, setIsEditing] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -3447,6 +3517,16 @@ function JournalView() {
   const [habitCompletions, setHabitCompletions] = useState<Map<string, boolean>>(new Map())
   const [calibrationScores, setCalibrationScores] = useState<Map<string, number>>(new Map())
   const supabase = createClient()
+
+  // Save selectedDate to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      localStorage.setItem('journalSelectedDate', selectedDate)
+    } catch (e) {
+      console.error('Error saving date:', e)
+    }
+  }, [selectedDate])
 
   useEffect(() => {
     loadJournalForDate(selectedDate)
