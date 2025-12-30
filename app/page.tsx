@@ -1474,12 +1474,15 @@ function TasksView() {
     
     if (id === null) {
       // Create new task
+      // Default points to 10 for new tasks if not specified
+      const insertData = {
+        ...filteredUpdates,
+        points: filteredUpdates.points ?? 10,
+        user_id: user?.id
+      }
       result = await supabase
         .from('tasks')
-        .insert({
-          ...filteredUpdates,
-          user_id: user?.id
-        })
+        .insert(insertData)
         .select('*, categories(*)')
         .single()
       error = result.error
@@ -2822,8 +2825,11 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
           <input
             type="number"
             min="1"
-            value={editedTask.points ?? 10}
-            onChange={(e) => setEditedTask({ ...editedTask, points: parseInt(e.target.value) || 10 })}
+            value={editedTask.points ?? ''}
+            onChange={(e) => {
+              const value = e.target.value
+              setEditedTask({ ...editedTask, points: value === '' ? null : (parseInt(value) || null) })
+            }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all"
           />
           <p className="text-lg text-gray-500 mt-1">
