@@ -331,6 +331,7 @@ export default function Home() {
                   height={48}
                   width={200}
                   className="h-12 w-auto"
+                  style={{ width: 'auto' }}
                   priority
                 />
               </button>
@@ -442,6 +443,7 @@ export default function Home() {
                     height={40}
                     width={167}
                     className="h-10 w-auto"
+                    style={{ width: 'auto' }}
                     priority
                   />
                 </button>
@@ -1431,6 +1433,8 @@ function TasksView() {
       completion_date: null,
       is_recurring: false,
       recurring_frequency: null,
+      is_repeating: false,
+      repeating_frequency: null,
       points: 10,
       user_id: user?.id
     })
@@ -1447,7 +1451,7 @@ function TasksView() {
     const { data: { user } } = await supabase.auth.getUser()
     
     // Filter out non-updatable fields (id, user_id, created_at, categories from join)
-    const allowedFields = ['title', 'status', 'category_id', 'description', 'due_date', 'is_hard_deadline', 'completion_date', 'is_recurring', 'recurring_frequency', 'points']
+    const allowedFields = ['title', 'status', 'category_id', 'description', 'due_date', 'is_hard_deadline', 'completion_date', 'is_recurring', 'recurring_frequency', 'is_repeating', 'repeating_frequency', 'points']
     const filteredUpdates: any = {}
     for (const key of allowedFields) {
       if (key in updates) {
@@ -1520,11 +1524,54 @@ function TasksView() {
         is_hard_deadline: task.is_hard_deadline,
         is_recurring: task.is_recurring,
         recurring_frequency: task.recurring_frequency,
+        is_repeating: task.is_repeating || false,
+        repeating_frequency: task.repeating_frequency || null,
         points: task.points ?? 10,
         user_id: user?.id
       }
       
       await supabase.from('tasks').insert(duplicateTask)
+    }
+    
+    // If completing a repeating task, create a duplicate with next due date after completion
+    // Check for both boolean true and string 'true' to handle database type variations
+    const isRepeating = task.is_repeating === true || task.is_repeating === 'true' || task.is_repeating === 1
+    if (!isComplete && isRepeating && task.repeating_frequency) {
+      console.log('Creating repeating task. Task data:', { 
+        is_repeating: task.is_repeating, 
+        repeating_frequency: task.repeating_frequency,
+        task_id: task.id 
+      })
+      // Calculate next due date from today (completion date) instead of original due date
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const todayStr = today.toISOString().split('T')[0]
+      const nextDueDate = calculateNextDueDate(todayStr, task.repeating_frequency)
+      
+      // Create duplicate task
+      const { data: { user } } = await supabase.auth.getUser()
+      const duplicateTask = {
+        title: task.title,
+        status: 'To do',
+        category_id: task.category_id,
+        description: task.description,
+        due_date: nextDueDate,
+        is_hard_deadline: task.is_hard_deadline,
+        is_recurring: task.is_recurring || false,
+        recurring_frequency: task.recurring_frequency || null,
+        is_repeating: task.is_repeating,
+        repeating_frequency: task.repeating_frequency,
+        points: task.points ?? 10,
+        user_id: user?.id
+      }
+      
+      const { error: insertError } = await supabase.from('tasks').insert(duplicateTask)
+      if (insertError) {
+        console.error('Error creating repeating task:', insertError)
+        alert('Error creating repeating task: ' + insertError.message)
+      } else {
+        console.log('Repeating task created successfully with due date:', nextDueDate)
+      }
     }
     
     await updateTask(task.id, {
@@ -2294,6 +2341,9 @@ function TasksView() {
                               {(task.is_recurring === true || task.is_recurring === 'true') && (
                                 <span className="text-base" title="Recurring task">🔁</span>
                               )}
+                              {(task.is_repeating === true || task.is_repeating === 'true') && (
+                                <span className="text-base" title="Repeating task">⏭️</span>
+                              )}
                               {task.sub_tasks && task.sub_tasks.length > 0 && (
                                 <span className="text-base" title={`${task.sub_tasks.length} subtask${task.sub_tasks.length > 1 ? 's' : ''}`}>📋</span>
                               )}
@@ -2380,6 +2430,9 @@ function TasksView() {
                           {(task.is_recurring === true || task.is_recurring === 'true') && (
                             <span className="text-lg" title="Recurring task">🔁</span>
                           )}
+                          {(task.is_repeating === true || task.is_repeating === 'true') && (
+                            <span className="text-lg" title="Repeating task">⏭️</span>
+                          )}
                         </div>
                         <div className="mt-1 text-base text-gray-500 flex items-center gap-2">
                           <span>{task.status}</span>
@@ -2454,6 +2507,7 @@ function TasksView() {
 function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowCategories }: any) {
   const [editedTask, setEditedTask] = useState(task)
   const [showRecurringModal, setShowRecurringModal] = useState(false)
+  const [showRepeatingModal, setShowRepeatingModal] = useState(false)
   const [showCompleteModal, setShowCompleteModal] = useState(false)
   const [subTasks, setSubTasks] = useState<any[]>([])
   const supabase = createClient()
@@ -2530,10 +2584,91 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
     }
   }
 
+  // Calculate next due date based on frequency (same logic as in TasksView)
+  const calculateNextDueDate = (currentDueDate: string, frequency: any): string => {
+    const date = new Date(currentDueDate + 'T00:00:00')
+    
+    try {
+      const parsed = typeof frequency === 'string' ? JSON.parse(frequency) : frequency
+      if (parsed.interval && parsed.unit) {
+        const interval = parsed.interval
+        switch (parsed.unit) {
+          case 'days':
+            date.setDate(date.getDate() + interval)
+            break
+          case 'weeks':
+            date.setDate(date.getDate() + (interval * 7))
+            break
+          case 'months':
+            date.setMonth(date.getMonth() + interval)
+            break
+          case 'years':
+            date.setFullYear(date.getFullYear() + interval)
+            break
+        }
+        return date.toISOString().split('T')[0]
+      }
+    } catch {
+      // Not JSON, treat as simple string
+    }
+    
+    // Handle simple frequency strings
+    switch (frequency) {
+      case 'daily':
+        date.setDate(date.getDate() + 1)
+        break
+      case 'weekly':
+        date.setDate(date.getDate() + 7)
+        break
+      case 'monthly':
+        date.setMonth(date.getMonth() + 1)
+        break
+      case 'yearly':
+        date.setFullYear(date.getFullYear() + 1)
+        break
+    }
+    
+    return date.toISOString().split('T')[0]
+  }
+
   const handleComplete = async () => {
     if (!task.id) return
     
     const today = new Date().toISOString().split('T')[0]
+    
+    // If completing a repeating task, create a duplicate with next due date after completion
+    const isRepeating = task.is_repeating === true || task.is_repeating === 'true' || task.is_repeating === 1 || editedTask.is_repeating === true || editedTask.is_repeating === 'true' || editedTask.is_repeating === 1
+    const repeatingFrequency = task.repeating_frequency || editedTask.repeating_frequency
+    
+    if (isRepeating && repeatingFrequency) {
+      // Calculate next due date from today (completion date) instead of original due date
+      const nextDueDate = calculateNextDueDate(today, repeatingFrequency)
+      
+      // Create duplicate task
+      const { data: { user } } = await supabase.auth.getUser()
+      const duplicateTask = {
+        title: task.title || editedTask.title,
+        status: 'To do',
+        category_id: task.category_id || editedTask.category_id,
+        description: task.description || editedTask.description,
+        due_date: nextDueDate,
+        is_hard_deadline: task.is_hard_deadline || editedTask.is_hard_deadline || false,
+        is_recurring: task.is_recurring || editedTask.is_recurring || false,
+        recurring_frequency: task.recurring_frequency || editedTask.recurring_frequency || null,
+        is_repeating: true,
+        repeating_frequency: repeatingFrequency,
+        points: task.points || editedTask.points || 10,
+        user_id: user?.id
+      }
+      
+      const { error: insertError } = await supabase.from('tasks').insert(duplicateTask)
+      if (insertError) {
+        console.error('Error creating repeating task:', insertError)
+        alert('Error creating repeating task: ' + insertError.message)
+      } else {
+        console.log('Repeating task created successfully with due date:', nextDueDate)
+      }
+    }
     
     // Mark task as complete
     const updatedTask = await onUpdate(task.id, {
@@ -3013,6 +3148,10 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
                 checked={editedTask.is_recurring || false}
                 onChange={(e) => {
                   if (e.target.checked) {
+                    // Deselect repeating if it's selected
+                    if (editedTask.is_repeating) {
+                      setEditedTask({ ...editedTask, is_repeating: false, repeating_frequency: null, is_recurring: true })
+                    }
                     // If no frequency is set, open modal. Otherwise, just enable recurring
                     if (!editedTask.recurring_frequency) {
                       setShowRecurringModal(true)
@@ -3028,6 +3167,31 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
               />
               <span className="text-lg">Recurring</span>
             </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={editedTask.is_repeating || false}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    // Deselect recurring if it's selected
+                    if (editedTask.is_recurring) {
+                      setEditedTask({ ...editedTask, is_recurring: false, recurring_frequency: null, is_repeating: true })
+                    }
+                    // If no frequency is set, open modal. Otherwise, just enable repeating
+                    if (!editedTask.repeating_frequency) {
+                      setShowRepeatingModal(true)
+                    } else {
+                      setEditedTask({ ...editedTask, is_repeating: true })
+                    }
+                  } else {
+                    setEditedTask({ ...editedTask, is_repeating: false, repeating_frequency: null })
+                  }
+                }}
+                className="w-4 h-4 cursor-pointer"
+                style={{ accentColor: '#11551a' }}
+              />
+              <span className="text-lg">Repeating</span>
+            </label>
           </div>
           {editedTask.is_recurring && editedTask.recurring_frequency && (
             <div className="mt-2 text-base text-gray-600">
@@ -3036,6 +3200,16 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
                 className="cursor-pointer hover:underline"
               >
                 Frequency: {getRecurringFrequencyLabel(editedTask.recurring_frequency)} (click to change)
+              </span>
+            </div>
+          )}
+          {editedTask.is_repeating && editedTask.repeating_frequency && (
+            <div className="mt-2 text-base text-gray-600">
+              <span 
+                onClick={() => setShowRepeatingModal(true)}
+                className="cursor-pointer hover:underline"
+              >
+                Frequency: {getRecurringFrequencyLabel(editedTask.repeating_frequency)} (click to change)
               </span>
             </div>
           )}
@@ -3067,6 +3241,18 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
           onSelect={(frequency) => {
             setEditedTask({ ...editedTask, is_recurring: true, recurring_frequency: frequency })
             setShowRecurringModal(false)
+          }}
+        />
+      )}
+
+      {/* Repeating Frequency Modal */}
+      {showRepeatingModal && (
+        <RecurringFrequencyModal
+          currentFrequency={editedTask.repeating_frequency}
+          onClose={() => setShowRepeatingModal(false)}
+          onSelect={(frequency) => {
+            setEditedTask({ ...editedTask, is_repeating: true, repeating_frequency: frequency })
+            setShowRepeatingModal(false)
           }}
         />
       )}
@@ -3752,6 +3938,25 @@ function JournalView() {
     })
   }
 
+  const navigateDate = (direction: 'prev' | 'next') => {
+    const currentDate = new Date(selectedDate + 'T00:00:00')
+    const newDate = new Date(currentDate)
+    
+    if (direction === 'prev') {
+      newDate.setDate(currentDate.getDate() - 1)
+    } else {
+      newDate.setDate(currentDate.getDate() + 1)
+    }
+    
+    const newDateString = newDate.toISOString().split('T')[0]
+    const today = new Date().toISOString().split('T')[0]
+    
+    // Don't allow navigating to future dates
+    if (newDateString <= today) {
+      setSelectedDate(newDateString)
+    }
+  }
+
   const organizedHabits = getOrganizedHabits()
 
   return (
@@ -3779,13 +3984,40 @@ function JournalView() {
         <label className="block text-lg font-medium text-gray-700 mb-1">
           Select Date
         </label>
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          max={new Date().toISOString().split('T')[0]} // Can't select future dates
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer"
-        />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigateDate('prev')}
+            className="text-white px-3 py-2 rounded-lg font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer flex items-center justify-center"
+            style={{ backgroundColor: '#11551a', fontSize: '20px' }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1a7a28')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
+            aria-label="Previous day"
+          >
+            ◀
+          </button>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            max={new Date().toISOString().split('T')[0]} // Can't select future dates
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer"
+          />
+          <button
+            onClick={() => navigateDate('next')}
+            disabled={selectedDate >= new Date().toISOString().split('T')[0]}
+            className="text-white px-3 py-2 rounded-lg font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            style={{ backgroundColor: '#11551a', fontSize: '20px' }}
+            onMouseEnter={(e) => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.backgroundColor = '#1a7a28'
+              }
+            }}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
+            aria-label="Next day"
+          >
+            ▶
+          </button>
+        </div>
         <p className="text-lg text-gray-600 mt-1.5">{formatDate(selectedDate)}</p>
       </div>
 
