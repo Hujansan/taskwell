@@ -1354,14 +1354,8 @@ function TasksView() {
       const saved = localStorage.getItem('tasksViewState')
       if (saved) {
         const parsed = JSON.parse(saved)
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:1356',message:'Parsed statusFilters type check',data:{statusFiltersType:typeof parsed.statusFilters,statusFiltersIsArray:Array.isArray(parsed.statusFilters),statusFiltersValue:parsed.statusFilters,categoryFiltersType:typeof parsed.categoryFilters,categoryFiltersIsArray:Array.isArray(parsed.categoryFilters),categoryFiltersValue:parsed.categoryFilters},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         const statusFiltersSet = new Set<string>((parsed.statusFilters || []) as string[])
         const categoryFiltersSet = new Set<string>((parsed.categoryFilters || ['All']) as string[])
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:1360',message:'Set creation type check',data:{statusFiltersSetSize:statusFiltersSet.size,statusFiltersSetValues:Array.from(statusFiltersSet),categoryFiltersSetSize:categoryFiltersSet.size,categoryFiltersSetValues:Array.from(categoryFiltersSet)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         const result = {
           sortBy: parsed.sortBy || 'due_date',
           sortOrder: parsed.sortOrder || 'desc',
@@ -1369,34 +1363,19 @@ function TasksView() {
           dateFilter: parsed.dateFilter || 'All',
           categoryFilters: categoryFiltersSet
         }
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:1363',message:'Return value type check',data:{resultStatusFiltersType:result.statusFilters instanceof Set,resultCategoryFiltersType:result.categoryFilters instanceof Set},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         return result
       }
     } catch (e) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:1366',message:'Error loading saved state',data:{error:String(e)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
       console.error('Error loading saved state:', e)
     }
     return null
   }
 
   const savedState = loadSavedState()
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:1371',message:'savedState check before useState',data:{savedStateExists:!!savedState,savedStateStatusFiltersType:savedState?.statusFilters instanceof Set,savedStateCategoryFiltersType:savedState?.categoryFilters instanceof Set},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-  // #endregion
   const [sortBy, setSortBy] = useState<'due_date' | 'status'>(savedState?.sortBy || 'due_date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(savedState?.sortOrder || 'desc')
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:1374',message:'useState statusFilters type check',data:{fallbackValue:Array.from(new Set()),savedStateValue:savedState?.statusFilters ? Array.from(savedState.statusFilters) : null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-  // #endregion
   const [statusFilters, setStatusFilters] = useState<Set<string>>(savedState?.statusFilters || new Set())
   const [dateFilter, setDateFilter] = useState<string>(savedState?.dateFilter || 'All')
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/985999e0-8cb3-4151-b0b6-864009086f81',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:1376',message:'useState categoryFilters type check',data:{fallbackValue:Array.from(new Set(['All'])),savedStateValue:savedState?.categoryFilters ? Array.from(savedState.categoryFilters) : null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-  // #endregion
   const [categoryFilters, setCategoryFilters] = useState<Set<string>>(savedState?.categoryFilters || new Set(['All']))
   const [mobileFilterTab, setMobileFilterTab] = useState<'Status' | 'Date' | 'Category' | 'Sort'>('Status')
   const supabase = createClient()
