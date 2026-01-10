@@ -829,13 +829,37 @@ function DashboardView() {
     ? dailyData.reduce((sum, d) => sum + d.taskPoints, 0) / dailyData.length
     : 0
 
+  // Calculate Habits Score for a specific day (out of 100)
+  const calculateHabitsScore = (day: any) => {
+    return day.totalHabits > 0 ? (day.habitCount / day.totalHabits) * 100 : 0
+  }
+
+  // Calculate 10-day average Habits Score
+  const calculateHabitsScoreAverage = () => {
+    if (dailyData.length === 0) return 0
+    const sum = dailyData.reduce((sum, day) => sum + calculateHabitsScore(day), 0)
+    return sum / dailyData.length
+  }
+
+  // Calculate Calibration Score for a specific day (out of 100)
+  const calculateCalibrationScore = (day: any) => {
+    return (day.avgCalibration / 5) * 100
+  }
+
+  // Calculate 10-day average Calibration Score
+  const calculateCalibrationScoreAverage = () => {
+    if (dailyData.length === 0) return 0
+    const sum = dailyData.reduce((sum, day) => sum + calculateCalibrationScore(day), 0)
+    return sum / dailyData.length
+  }
+
   // Calculate Overall Score for a specific day
   const calculateOverallScore = (day: any) => {
     // Habits completion %
-    const habitsPercent = day.totalHabits > 0 ? (day.habitCount / day.totalHabits) * 100 : 0
+    const habitsPercent = calculateHabitsScore(day)
     
     // Calibration % (out of max 5)
-    const calibrationPercent = (day.avgCalibration / 5) * 100
+    const calibrationPercent = calculateCalibrationScore(day)
     
     // Tasks % (points earned / total points available, capped at 100)
     const tasksPercent = totalPoints > 0 ? Math.min(100, (day.taskPoints / totalPoints) * 100) : 0
@@ -895,16 +919,25 @@ function DashboardView() {
           <h3 className="text-lg font-semibold text-gray-700 mb-3">Tasks</h3>
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Total Tasks:</span>
-              <span className="font-bold text-xl">{totalTasks}</span>
+              <span className="text-gray-600">Yesterday:</span>
+              <span className="font-bold text-2xl" style={{ color: '#11551a' }}>
+                {dailyData.length >= 2 ? dailyData[dailyData.length - 2].taskPoints : '-'}
+              </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Completed:</span>
-              <span className="font-bold text-xl" style={{ color: '#11551a' }}>{completedTasks}</span>
+              <span className="text-gray-600">10-day Avg:</span>
+              <span className="font-bold text-3xl" style={{ color: '#11551a' }}>
+                {dailyData.length > 0 ? Math.round(avgPoints) : '-'}
+              </span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">10-day Avg Points:</span>
-              <span className="font-bold text-xl" style={{ color: '#11551a' }}>{Math.round(avgPoints)}</span>
+            <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
+              <div 
+                className="h-3 rounded-full transition-all"
+                style={{ 
+                  width: `${maxPoints > 0 ? (avgPoints / maxPoints) * 100 : 0}%`,
+                  backgroundColor: '#11551a'
+                }}
+              />
             </div>
           </div>
         </div>
@@ -914,20 +947,22 @@ function DashboardView() {
           <h3 className="text-lg font-semibold text-gray-700 mb-3">Habits</h3>
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Total Items:</span>
-              <span className="font-bold text-xl">{totalHabitItems}</span>
+              <span className="text-gray-600">Yesterday:</span>
+              <span className="font-bold text-2xl" style={{ color: '#11551a' }}>
+                {dailyData.length >= 2 ? Math.round(calculateHabitsScore(dailyData[dailyData.length - 2])) : '-'}
+              </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">10-day Avg:</span>
-              <span className="font-bold text-xl" style={{ color: '#11551a' }}>
-                {Math.round(avgHabitCompletion)}/{totalHabitItems}
+              <span className="font-bold text-3xl" style={{ color: '#11551a' }}>
+                {dailyData.length > 0 ? Math.round(calculateHabitsScoreAverage()) : '-'}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
               <div 
                 className="h-3 rounded-full transition-all"
                 style={{ 
-                  width: `${totalHabitItems > 0 ? (avgHabitCompletion / totalHabitItems) * 100 : 0}%`,
+                  width: `${dailyData.length > 0 ? calculateHabitsScoreAverage() : 0}%`,
                   backgroundColor: '#11551a'
                 }}
               />
@@ -940,20 +975,22 @@ function DashboardView() {
           <h3 className="text-lg font-semibold text-gray-700 mb-3">Calibration</h3>
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Total Items:</span>
-              <span className="font-bold text-xl">{totalCalibrations}</span>
+              <span className="text-gray-600">Yesterday:</span>
+              <span className="font-bold text-2xl" style={{ color: '#11551a' }}>
+                {dailyData.length >= 2 ? Math.round(calculateCalibrationScore(dailyData[dailyData.length - 2])) : '-'}
+              </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">10-day Avg:</span>
-              <span className="font-bold text-xl" style={{ color: '#11551a' }}>
-                {avgCalibration > 0 ? avgCalibration.toFixed(1) : '-'}/5
+              <span className="font-bold text-3xl" style={{ color: '#11551a' }}>
+                {dailyData.length > 0 ? Math.round(calculateCalibrationScoreAverage()) : '-'}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
               <div 
                 className="h-3 rounded-full transition-all"
                 style={{ 
-                  width: `${(avgCalibration / 5) * 100}%`,
+                  width: `${dailyData.length > 0 ? calculateCalibrationScoreAverage() : 0}%`,
                   backgroundColor: '#11551a'
                 }}
               />
@@ -1358,11 +1395,17 @@ function TasksView() {
         const parsed = JSON.parse(saved)
         const statusFiltersSet = new Set<string>((parsed.statusFilters || []) as string[])
         const categoryFiltersSet = new Set<string>((parsed.categoryFilters || ['All']) as string[])
+        // Handle both old string format and new Set format for dateFilter
+        const dateFiltersSet = parsed.dateFilters 
+          ? new Set<string>((parsed.dateFilters || ['All']) as string[])
+          : parsed.dateFilter 
+          ? new Set<string>([parsed.dateFilter])
+          : new Set<string>(['All'])
         const result = {
           sortBy: parsed.sortBy || 'due_date',
           sortOrder: parsed.sortOrder || 'desc',
           statusFilters: statusFiltersSet,
-          dateFilter: parsed.dateFilter || 'All',
+          dateFilters: dateFiltersSet,
           categoryFilters: categoryFiltersSet
         }
         return result
@@ -1377,7 +1420,7 @@ function TasksView() {
   const [sortBy, setSortBy] = useState<'due_date' | 'status'>(savedState?.sortBy || 'due_date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(savedState?.sortOrder || 'desc')
   const [statusFilters, setStatusFilters] = useState<Set<string>>(savedState?.statusFilters || new Set())
-  const [dateFilter, setDateFilter] = useState<string>(savedState?.dateFilter || 'All')
+  const [dateFilters, setDateFilters] = useState<Set<string>>(savedState?.dateFilters || new Set(['All']))
   const [categoryFilters, setCategoryFilters] = useState<Set<string>>(savedState?.categoryFilters || new Set(['All']))
   const [mobileFilterTab, setMobileFilterTab] = useState<'Status' | 'Date' | 'Category' | 'Sort'>('Status')
   const supabase = createClient()
@@ -1390,13 +1433,13 @@ function TasksView() {
         sortBy,
         sortOrder,
         statusFilters: Array.from(statusFilters),
-        dateFilter,
+        dateFilters: Array.from(dateFilters),
         categoryFilters: Array.from(categoryFilters)
       }))
     } catch (e) {
       console.error('Error saving state:', e)
     }
-  }, [sortBy, sortOrder, statusFilters, dateFilter, categoryFilters])
+  }, [sortBy, sortOrder, statusFilters, dateFilters, categoryFilters])
 
   useEffect(() => {
     loadTasks()
@@ -1690,8 +1733,8 @@ function TasksView() {
       })
     }
 
-    // Apply date filter
-    if (dateFilter !== 'All') {
+    // Apply date filter (multiple selections supported - OR logic)
+    if (dateFilters.size > 0 && !dateFilters.has('All')) {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       const todayStr = today.toISOString().split('T')[0]
@@ -1703,24 +1746,34 @@ function TasksView() {
       const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
 
       filtered = filtered.filter(task => {
-        if (dateFilter === 'Today & overdue') {
-          return task.due_date && task.due_date <= todayStr
-        } else if (dateFilter === 'Next 7 days') {
-          return task.due_date && task.due_date >= todayStr && task.due_date <= sevenDaysStr
-        } else if (dateFilter === 'Completed last 7 days') {
-          return task.completion_date && task.completion_date >= sevenDaysAgoStr && task.completion_date <= todayStr
-        } else if (dateFilter === 'No due date') {
-          return !task.due_date
+        // Check if task matches any of the selected date filters (OR logic)
+        if (dateFilters.has('Today & overdue')) {
+          if (task.due_date && task.due_date <= todayStr) return true
         }
-        return true
+        if (dateFilters.has('Next 7 days')) {
+          if (task.due_date && task.due_date >= todayStr && task.due_date <= sevenDaysStr) return true
+        }
+        if (dateFilters.has('Completed last 7 days')) {
+          if (task.completion_date && task.completion_date >= sevenDaysAgoStr && task.completion_date <= todayStr) return true
+        }
+        if (dateFilters.has('No due date')) {
+          if (!task.due_date) return true
+        }
+        return false
       })
     }
 
-    // Apply category filter
+    // Apply category filter (multiple selections supported - OR logic)
     if (categoryFilters.size > 0 && !categoryFilters.has('All')) {
       filtered = filtered.filter(task => {
-        if (!task.category_id) return false
-        return categoryFilters.has(task.category_id)
+        // Check if task matches any of the selected category filters (OR logic)
+        if (categoryFilters.has('None')) {
+          if (!task.category_id) return true
+        }
+        if (task.category_id && categoryFilters.has(task.category_id)) {
+          return true
+        }
+        return false
       })
     }
 
@@ -1768,6 +1821,8 @@ function TasksView() {
   const getCategoryCount = (categoryId: string, baseTasks: any[]) => {
     if (categoryId === 'All') {
       return baseTasks.length
+    } else if (categoryId === 'None') {
+      return baseTasks.filter(t => !t.category_id).length
     }
     return baseTasks.filter(t => t.category_id === categoryId).length
   }
@@ -1800,8 +1855,8 @@ function TasksView() {
   const getBaseTasksForStatusCount = (statusOption: string) => {
     let base = [...tasks]
 
-    // Apply date filter
-    if (dateFilter !== 'All') {
+    // Apply date filter (multiple selections supported - OR logic)
+    if (dateFilters.size > 0 && !dateFilters.has('All')) {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       const todayStr = today.toISOString().split('T')[0]
@@ -1813,24 +1868,34 @@ function TasksView() {
       const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
 
       base = base.filter(task => {
-        if (dateFilter === 'Today & overdue') {
-          return task.due_date && task.due_date <= todayStr
-        } else if (dateFilter === 'Next 7 days') {
-          return task.due_date && task.due_date >= todayStr && task.due_date <= sevenDaysStr
-        } else if (dateFilter === 'Completed last 7 days') {
-          return task.completion_date && task.completion_date >= sevenDaysAgoStr && task.completion_date <= todayStr
-        } else if (dateFilter === 'No due date') {
-          return !task.due_date
+        // Check if task matches any of the selected date filters (OR logic)
+        if (dateFilters.has('Today & overdue')) {
+          if (task.due_date && task.due_date <= todayStr) return true
         }
-        return true
+        if (dateFilters.has('Next 7 days')) {
+          if (task.due_date && task.due_date >= todayStr && task.due_date <= sevenDaysStr) return true
+        }
+        if (dateFilters.has('Completed last 7 days')) {
+          if (task.completion_date && task.completion_date >= sevenDaysAgoStr && task.completion_date <= todayStr) return true
+        }
+        if (dateFilters.has('No due date')) {
+          if (!task.due_date) return true
+        }
+        return false
       })
     }
 
-    // Apply category filter
+    // Apply category filter (multiple selections supported - OR logic)
     if (categoryFilters.size > 0 && !categoryFilters.has('All')) {
       base = base.filter(task => {
-        if (!task.category_id) return false
-        return categoryFilters.has(task.category_id)
+        // Check if task matches any of the selected category filters (OR logic)
+        if (categoryFilters.has('None')) {
+          if (!task.category_id) return true
+        }
+        if (task.category_id && categoryFilters.has(task.category_id)) {
+          return true
+        }
+        return false
       })
     }
 
@@ -1855,11 +1920,17 @@ function TasksView() {
       })
     }
 
-    // Apply category filter
+    // Apply category filter (multiple selections supported - OR logic)
     if (categoryFilters.size > 0 && !categoryFilters.has('All')) {
       base = base.filter(task => {
-        if (!task.category_id) return false
-        return categoryFilters.has(task.category_id)
+        // Check if task matches any of the selected category filters (OR logic)
+        if (categoryFilters.has('None')) {
+          if (!task.category_id) return true
+        }
+        if (task.category_id && categoryFilters.has(task.category_id)) {
+          return true
+        }
+        return false
       })
     }
 
@@ -1884,8 +1955,8 @@ function TasksView() {
       })
     }
 
-    // Apply date filter
-    if (dateFilter !== 'All') {
+    // Apply date filter (multiple selections supported - OR logic)
+    if (dateFilters.size > 0 && !dateFilters.has('All')) {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       const todayStr = today.toISOString().split('T')[0]
@@ -1897,16 +1968,20 @@ function TasksView() {
       const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
 
       base = base.filter(task => {
-        if (dateFilter === 'Today & overdue') {
-          return task.due_date && task.due_date <= todayStr
-        } else if (dateFilter === 'Next 7 days') {
-          return task.due_date && task.due_date >= todayStr && task.due_date <= sevenDaysStr
-        } else if (dateFilter === 'Completed last 7 days') {
-          return task.completion_date && task.completion_date >= sevenDaysAgoStr && task.completion_date <= todayStr
-        } else if (dateFilter === 'No due date') {
-          return !task.due_date
+        // Check if task matches any of the selected date filters (OR logic)
+        if (dateFilters.has('Today & overdue')) {
+          if (task.due_date && task.due_date <= todayStr) return true
         }
-        return true
+        if (dateFilters.has('Next 7 days')) {
+          if (task.due_date && task.due_date >= todayStr && task.due_date <= sevenDaysStr) return true
+        }
+        if (dateFilters.has('Completed last 7 days')) {
+          if (task.completion_date && task.completion_date >= sevenDaysAgoStr && task.completion_date <= todayStr) return true
+        }
+        if (dateFilters.has('No due date')) {
+          if (!task.due_date) return true
+        }
+        return false
       })
     }
 
@@ -1960,6 +2035,34 @@ function TasksView() {
       newFilters.add(status)
     }
     setStatusFilters(newFilters)
+  }
+
+  // Date filter handlers
+  const toggleDateFilter = (dateOption: string) => {
+    const newFilters = new Set(dateFilters)
+    if (dateOption === 'All') {
+      if (newFilters.has('All')) {
+        // If All is already selected, do nothing
+        return
+      } else {
+        // Select All and unselect everything else
+        setDateFilters(new Set(['All']))
+      }
+    } else {
+      // Remove All if it's selected
+      newFilters.delete('All')
+      if (newFilters.has(dateOption)) {
+        newFilters.delete(dateOption)
+      } else {
+        newFilters.add(dateOption)
+      }
+      // If no date filters selected, select All
+      if (newFilters.size === 0) {
+        setDateFilters(new Set(['All']))
+      } else {
+        setDateFilters(newFilters)
+      }
+    }
   }
 
   // Category filter handlers
@@ -2055,8 +2158,8 @@ function TasksView() {
                         onClick={() => toggleStatusFilter(status)}
                         className={`px-2.5 py-1 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
                           isSelected
-                            ? 'text-white shadow-md'
-                            : 'bg-gray-200 text-gray-700'
+                            ? 'text-white shadow-md border-2 border-gray-900'
+                            : 'bg-gray-200 text-gray-700 border-2 border-transparent'
                         }`}
                         style={isSelected ? { backgroundColor: '#11551a' } : {}}
                       >
@@ -2072,15 +2175,15 @@ function TasksView() {
                   {['All', 'Today & overdue', 'Next 7 days', 'Completed last 7 days', 'No due date'].map(dateOption => {
                     const baseTasks = getBaseTasksForDateCount(dateOption)
                     const count = getDateCount(dateOption, baseTasks)
-                    const isSelected = dateFilter === dateOption
+                    const isSelected = dateFilters.has(dateOption)
                     return (
                       <button
                         key={dateOption}
-                        onClick={() => setDateFilter(dateOption)}
+                        onClick={() => toggleDateFilter(dateOption)}
                         className={`px-2.5 py-1 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
                           isSelected
-                            ? 'text-white shadow-md'
-                            : 'bg-gray-200 text-gray-700'
+                            ? 'text-white shadow-md border-2 border-gray-900'
+                            : 'bg-gray-200 text-gray-700 border-2 border-transparent'
                         }`}
                         style={isSelected ? { backgroundColor: '#11551a' } : {}}
                       >
@@ -2097,8 +2200,8 @@ function TasksView() {
                     onClick={() => toggleCategoryFilter('All')}
                     className={`px-2.5 py-1 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
                       categoryFilters.has('All')
-                        ? 'text-white shadow-md'
-                        : 'bg-gray-200 text-gray-700'
+                        ? 'text-white shadow-md border-2 border-gray-900'
+                        : 'bg-gray-200 text-gray-700 border-2 border-transparent'
                     }`}
                     style={categoryFilters.has('All') ? { backgroundColor: '#11551a' } : {}}
                   >
@@ -2114,8 +2217,8 @@ function TasksView() {
                         onClick={() => toggleCategoryFilter(category.id)}
                         className={`px-2.5 py-1 rounded-lg text-sm font-medium text-white transition-all duration-200 active:scale-[0.98] cursor-pointer ${
                           isSelected
-                            ? 'ring-2 ring-offset-2'
-                            : ''
+                            ? 'border-2 border-gray-900'
+                            : 'border-2 border-transparent'
                         }`}
                         style={{ 
                           backgroundColor: category.color
@@ -2125,6 +2228,17 @@ function TasksView() {
                       </button>
                     )
                   })}
+                  <button
+                    onClick={() => toggleCategoryFilter('None')}
+                    className={`px-2.5 py-1 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+                      categoryFilters.has('None')
+                        ? 'text-white shadow-md border-2 border-gray-900'
+                        : 'bg-gray-200 text-gray-700 border-2 border-transparent'
+                    }`}
+                    style={categoryFilters.has('None') ? { backgroundColor: '#6b7280' } : {}}
+                  >
+                    None ({getCategoryCount('None', getBaseTasksForCategoryCount('None'))})
+                  </button>
                 </div>
               )}
 
@@ -2174,8 +2288,8 @@ function TasksView() {
                       onClick={() => toggleStatusFilter(status)}
                       className={`px-2.5 py-1 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] cursor-pointer ${
                         isSelected
-                          ? 'text-white shadow-md'
-                          : 'bg-gray-200 text-gray-700'
+                          ? 'text-white shadow-md border-2 border-gray-900'
+                          : 'bg-gray-200 text-gray-700 border-2 border-transparent'
                       }`}
                       style={isSelected ? { backgroundColor: '#11551a' } : {}}
                       onMouseEnter={(e) => {
@@ -2202,15 +2316,15 @@ function TasksView() {
                 {['All', 'Today & overdue', 'Next 7 days', 'Completed last 7 days', 'No due date'].map(dateOption => {
                   const baseTasks = getBaseTasksForDateCount(dateOption)
                   const count = getDateCount(dateOption, baseTasks)
-                  const isSelected = dateFilter === dateOption
+                  const isSelected = dateFilters.has(dateOption)
                   return (
                     <button
                       key={dateOption}
-                      onClick={() => setDateFilter(dateOption)}
+                      onClick={() => toggleDateFilter(dateOption)}
                       className={`px-2.5 py-1 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] cursor-pointer ${
                         isSelected
-                          ? 'text-white shadow-md'
-                          : 'bg-gray-200 text-gray-700'
+                          ? 'text-white shadow-md border-2 border-gray-900'
+                          : 'bg-gray-200 text-gray-700 border-2 border-transparent'
                       }`}
                       style={isSelected ? { backgroundColor: '#11551a' } : {}}
                       onMouseEnter={(e) => {
@@ -2238,8 +2352,8 @@ function TasksView() {
                   onClick={() => toggleCategoryFilter('All')}
                   className={`px-2.5 py-1 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] cursor-pointer ${
                     categoryFilters.has('All')
-                      ? 'text-white shadow-md'
-                      : 'bg-gray-200 text-gray-700'
+                      ? 'text-white shadow-md border-2 border-gray-900'
+                      : 'bg-gray-200 text-gray-700 border-2 border-transparent'
                   }`}
                   style={categoryFilters.has('All') ? { backgroundColor: '#11551a' } : {}}
                   onMouseEnter={(e) => {
@@ -2265,8 +2379,8 @@ function TasksView() {
                       onClick={() => toggleCategoryFilter(category.id)}
                       className={`px-2.5 py-1 rounded-lg text-lg font-medium text-white transition-all duration-200 hover:scale-[1.02] cursor-pointer ${
                         isSelected
-                          ? 'ring-2 ring-offset-2'
-                          : ''
+                          ? 'border-2 border-gray-900'
+                          : 'border-2 border-transparent'
                       }`}
                       style={{ 
                         backgroundColor: category.color
@@ -2276,6 +2390,27 @@ function TasksView() {
                     </button>
                   )
                 })}
+                <button
+                  onClick={() => toggleCategoryFilter('None')}
+                  className={`px-2.5 py-1 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] cursor-pointer ${
+                    categoryFilters.has('None')
+                      ? 'text-white shadow-md border-2 border-gray-900'
+                      : 'bg-gray-200 text-gray-700 border-2 border-transparent'
+                  }`}
+                  style={categoryFilters.has('None') ? { backgroundColor: '#6b7280' } : {}}
+                  onMouseEnter={(e) => {
+                    if (!categoryFilters.has('None')) {
+                      e.currentTarget.style.backgroundColor = '#e0e0e0'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!categoryFilters.has('None')) {
+                      e.currentTarget.style.backgroundColor = '#e5e7eb'
+                    }
+                  }}
+                >
+                  None ({getCategoryCount('None', getBaseTasksForCategoryCount('None'))})
+                </button>
               </div>
             </div>
           </div>
