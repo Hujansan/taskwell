@@ -13,7 +13,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [authView, setAuthView] = useState<'signin' | 'signup' | 'forgot' | 'reset'>('signin')
-  const [view, setView] = useState<'dashboard' | 'tasks' | 'journal' | 'settings'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'tasks' | 'journal' | 'today' | 'settings'>('dashboard')
   const [showChangePassword, setShowChangePassword] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -395,6 +395,25 @@ export default function Home() {
                 Journal
               </button>
               <button
+                onClick={() => setView('today')}
+                className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
+                  view === 'today' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                }`}
+                style={view === 'today' ? { backgroundColor: '#11551a' } : {}}
+                onMouseEnter={(e) => {
+                  if (view !== 'today') {
+                    e.currentTarget.style.backgroundColor = '#e0e0e0'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (view !== 'today') {
+                    e.currentTarget.style.backgroundColor = '#e5e7eb'
+                  }
+                }}
+              >
+                Today
+              </button>
+              <button
                 onClick={() => setView('settings')}
                 className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
                   view === 'settings' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
@@ -512,6 +531,18 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => {
+                    setView('today')
+                    setMobileMenuOpen(false)
+                  }}
+                  className={`w-full px-4 py-2.5 rounded-lg text-base font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+                    view === 'today' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                  }`}
+                  style={view === 'today' ? { backgroundColor: '#11551a' } : {}}
+                >
+                  Today
+                </button>
+                <button
+                  onClick={() => {
                     setView('settings')
                     setMobileMenuOpen(false)
                   }}
@@ -539,7 +570,7 @@ export default function Home() {
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {view === 'dashboard' ? <DashboardView /> : view === 'tasks' ? <TasksView /> : view === 'journal' ? <JournalView /> : <SettingsView user={user} />}
+        {view === 'dashboard' ? <DashboardView /> : view === 'tasks' ? <TasksView /> : view === 'journal' ? <JournalView /> : view === 'today' ? <TodayView /> : <SettingsView user={user} />}
       </div>
     </div>
   )
@@ -1220,6 +1251,502 @@ function DashboardView() {
   )
 }
 
+function TodayView() {
+  const [todayItems, setTodayItems] = useState<any[]>([])
+  const [tasks, setTasks] = useState<any[]>([])
+  const [habits, setHabits] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [selectedTask, setSelectedTask] = useState<any>(null)
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null)
+  const [dragOverItemId, setDragOverItemId] = useState<string | null>(null)
+  const supabase = createClient()
+
+  const today = new Date().toISOString().split('T')[0]
+
+  useEffect(() => {
+    loadTodayItems()
+    loadTasks()
+    loadHabits()
+    loadCategories()
+  }, [])
+
+  const loadTodayItems = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data } = await supabase
+      .from('today_items')
+      .select('*')
+      .eq('user_id', user?.id)
+      .eq('date', today)
+      .order('sort_order', { ascending: true })
+    
+    if (data) setTodayItems(data)
+  }
+
+  const loadTasks = async () => {
+    const { data } = await supabase
+      .from('tasks')
+      .select('*, categories(*), sub_tasks(*)')
+      .order('created_at', { ascending: false })
+    if (data) setTasks(data)
+  }
+
+  const loadHabits = async () => {
+    const { data } = await supabase
+      .from('habits')
+      .select('*')
+      .order('sort_order')
+    if (data) setHabits(data)
+  }
+
+  const loadCategories = async () => {
+    const { data } = await supabase
+      .from('categories')
+      .select('*')
+      .order('sort_order')
+    if (data) setCategories(data)
+  }
+
+  const getTodayItemsWithData = () => {
+    return todayItems.map(item => {
+      if (item.item_type === 'task') {
+        const task = tasks.find(t => t.id === item.item_id)
+        return { ...item, data: task, type: 'task' }
+      } else {
+        const habit = habits.find(h => h.id === item.item_id)
+        return { ...item, data: habit, type: 'habit' }
+      }
+    }).filter(item => item.data) // Filter out items where data doesn't exist
+  }
+
+  const handleDragStart = (e: React.DragEvent, itemId: string) => {
+    setDraggedItemId(itemId)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/html', itemId)
+  }
+
+  const handleDragOver = (e: React.DragEvent, itemId: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (itemId !== draggedItemId) {
+      setDragOverItemId(itemId)
+    }
+  }
+
+  const handleDragLeave = () => {
+    setDragOverItemId(null)
+  }
+
+  const handleDrop = async (e: React.DragEvent, targetItemId: string) => {
+    e.preventDefault()
+    setDragOverItemId(null)
+    
+    if (!draggedItemId || draggedItemId === targetItemId) {
+      setDraggedItemId(null)
+      return
+    }
+
+    const items = [...todayItems].sort((a, b) => a.sort_order - b.sort_order)
+    const draggedIndex = items.findIndex(item => item.id === draggedItemId)
+    const targetIndex = items.findIndex(item => item.id === targetItemId)
+    
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedItemId(null)
+      return
+    }
+
+    // Remove dragged item from array
+    const [draggedItem] = items.splice(draggedIndex, 1)
+    // Insert at new position
+    items.splice(targetIndex, 0, draggedItem)
+
+    // Update sort_order for all items
+    const updates = items.map((item, index) => ({
+      id: item.id,
+      sort_order: index
+    }))
+
+    // Update all items in database
+    for (const update of updates) {
+      await supabase
+        .from('today_items')
+        .update({ sort_order: update.sort_order })
+        .eq('id', update.id)
+    }
+    
+    setDraggedItemId(null)
+    loadTodayItems()
+  }
+
+  const handleDragEnd = () => {
+    setDraggedItemId(null)
+    setDragOverItemId(null)
+  }
+
+  const toggleTaskComplete = async (task: any, e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    const isComplete = task.status === 'Complete'
+    
+    await supabase
+      .from('tasks')
+      .update({
+        status: isComplete ? 'To do' : 'Complete',
+        completion_date: isComplete ? null : today
+      })
+      .eq('id', task.id)
+    
+    loadTasks()
+  }
+
+  const toggleHabitComplete = async (habitId: string) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: existing } = await supabase
+      .from('habit_completions')
+      .select('*')
+      .eq('habit_id', habitId)
+      .eq('date', today)
+      .eq('user_id', user?.id)
+      .single()
+    
+    const completed = existing?.completed || false
+    
+    await supabase
+      .from('habit_completions')
+      .upsert({
+        habit_id: habitId,
+        date: today,
+        user_id: user?.id,
+        completed: !completed
+      }, {
+        onConflict: 'habit_id,date,user_id'
+      })
+    
+    // Reload habits to sync with Journal page
+    loadHabits()
+  }
+
+  const removeFromToday = async (itemId: string) => {
+    await supabase
+      .from('today_items')
+      .delete()
+      .eq('id', itemId)
+    
+    loadTodayItems()
+  }
+
+  const getCompletedPoints = (task: any): number => {
+    if (task.sub_tasks && task.sub_tasks.length > 0) {
+      return task.sub_tasks
+        .filter((st: any) => st.completion_date !== null)
+        .reduce((sum: number, st: any) => sum + (st.points ?? 0), 0)
+    } else {
+      return task.status === 'Complete' ? (task.points ?? 10) : 0
+    }
+  }
+
+  const getTotalPoints = (task: any): number => {
+    return task.points ?? 10
+  }
+
+  const getCompletedSubtasksCount = (task: any): number => {
+    if (!task.sub_tasks || task.sub_tasks.length === 0) return 0
+    return task.sub_tasks.filter((st: any) => st.completion_date !== null).length
+  }
+
+  const getHabitCompletionStatus = async (habitId: string) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data } = await supabase
+      .from('habit_completions')
+      .select('completed')
+      .eq('habit_id', habitId)
+      .eq('date', today)
+      .eq('user_id', user?.id)
+      .single()
+    
+    return data?.completed || false
+  }
+
+  const itemsWithData = getTodayItemsWithData()
+  const sortedItems = [...itemsWithData].sort((a, b) => a.sort_order - b.sort_order)
+
+  return (
+    <div className="bg-white rounded-xl shadow-lg p-5">
+      <h2 className="text-2xl font-bold mb-5" style={{ color: '#11551a' }}>Today</h2>
+      
+      {selectedTask ? (
+        /* Task Detail View */
+        <TaskDetailView
+          task={selectedTask}
+          categories={categories}
+          onClose={() => setSelectedTask(null)}
+          onUpdate={async (id: string | null, updates: any) => {
+            const { data: { user } } = await supabase.auth.getUser()
+            const allowedFields = ['title', 'status', 'category_id', 'description', 'due_date', 'is_hard_deadline', 'completion_date', 'is_recurring', 'recurring_frequency', 'is_repeating', 'repeating_frequency', 'points']
+            const filteredUpdates: any = {}
+            for (const key of allowedFields) {
+              if (key in updates) {
+                filteredUpdates[key] = updates[key]
+              }
+            }
+            
+            if (filteredUpdates.status === 'Complete' && !filteredUpdates.completion_date) {
+              filteredUpdates.completion_date = new Date().toISOString().split('T')[0]
+            }
+            if (filteredUpdates.status !== 'Complete') {
+              filteredUpdates.completion_date = null
+            }
+            
+            const result = await supabase
+              .from('tasks')
+              .update(filteredUpdates)
+              .eq('id', id)
+              .select('*, categories(*)')
+              .single()
+            
+            if (result.data) {
+              loadTasks()
+              loadTodayItems()
+              return result.data
+            }
+            return null
+          }}
+          onDelete={async (id: string) => {
+            await supabase.from('tasks').delete().eq('id', id)
+            loadTasks()
+            loadTodayItems()
+            setSelectedTask(null)
+          }}
+          onShowCategories={() => {}}
+        />
+      ) : sortedItems.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500 text-lg">No items selected for today</p>
+          <p className="text-gray-400 text-base mt-2">Add tasks from the Tasks page or habits from the Journal page</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {sortedItems.map((item, index) => {
+            if (item.type === 'task' && item.data) {
+              const task = item.data
+              const isComplete = task.status === 'Complete'
+              
+              return (
+                <div
+                  key={item.id}
+                  onDragOver={(e) => handleDragOver(e, item.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, item.id)}
+                  className={`bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-200 p-3 group ${
+                    dragOverItemId === item.id ? 'border-2 border-green-500' : ''
+                  }`}
+                  style={{ minHeight: '120px' }}
+                >
+                  <div className="flex items-start gap-2 h-full">
+                    {/* Drag Handle */}
+                    <div 
+                      draggable
+                      onDragStart={(e) => {
+                        e.stopPropagation()
+                        handleDragStart(e, item.id)
+                      }}
+                      onDragEnd={handleDragEnd}
+                      className="flex-shrink-0 cursor-grab active:cursor-grabbing pt-0.5"
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      title="Drag to reorder"
+                    >
+                      <svg className="w-5 h-5 text-gray-400 hover:text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z" />
+                      </svg>
+                    </div>
+
+                    {/* Completion Checkbox */}
+                    <input
+                      type="checkbox"
+                      checked={isComplete}
+                      onChange={(e) => {
+                        e.stopPropagation()
+                        toggleTaskComplete(task, e as any)
+                      }}
+                      className="w-5 h-5 mt-0.5 cursor-pointer flex-shrink-0"
+                      style={{ accentColor: '#11551a' }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    
+                    {/* Task Info - Clickable to open detail view */}
+                    <div 
+                      className="flex-1 flex flex-col overflow-hidden cursor-pointer"
+                      onClick={() => setSelectedTask(task)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <h4 className={`font-semibold text-base transition-colors ${
+                              isComplete ? 'line-through text-gray-400' : 'text-gray-800 group-hover:text-green-700'
+                            }`}>
+                              {task.title}
+                            </h4>
+                            {(task.is_recurring === true || task.is_recurring === 'true') && (
+                              <span className="text-base" title="Recurring task">🔁</span>
+                            )}
+                            {(task.is_repeating === true || task.is_repeating === 'true') && (
+                              <span className="text-base" title="Repeating task">⏭️</span>
+                            )}
+                            {task.sub_tasks && task.sub_tasks.length > 0 && (
+                              <span className="text-base" title={`${task.sub_tasks.length} subtask${task.sub_tasks.length > 1 ? 's' : ''}`}>📋</span>
+                            )}
+                          </div>
+                          <div className="mt-1 text-sm text-gray-500 flex items-center gap-2">
+                            <span>{task.status}</span>
+                            <span className="text-gray-400">•</span>
+                            <span>Points: {getCompletedPoints(task)}/{getTotalPoints(task)}</span>
+                            {task.sub_tasks && task.sub_tasks.length > 0 && (
+                              <>
+                                <span className="text-gray-400">•</span>
+                                <span>Subtasks: {getCompletedSubtasksCount(task)}/{task.sub_tasks.length}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        {task.categories && (
+                          <span
+                            className="inline-block px-2 py-0.5 rounded-md text-sm text-white font-medium flex-shrink-0"
+                            style={{ backgroundColor: task.categories.color }}
+                          >
+                            {task.categories.name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-auto pt-1.5">
+                        {(task.due_date || task.completion_date) && (
+                          <p className="text-sm">
+                            {task.due_date && (
+                              <span className={task.is_hard_deadline ? 'font-bold text-red-600' : 'text-gray-600'}>
+                                Due: {new Date(task.due_date + 'T00:00:00').toLocaleDateString()}
+                                {task.is_hard_deadline && <span className="ml-1" style={{ fontSize: '16px' }}>❗</span>}
+                              </span>
+                            )}
+                            {task.due_date && task.completion_date && <span className="mx-2 text-gray-400">|</span>}
+                            {task.completion_date && (
+                              <span style={{ color: '#11551a' }}>
+                                ✓ {new Date(task.completion_date + 'T00:00:00').toLocaleDateString()}
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            } else if (item.type === 'habit' && item.data) {
+              const habit = item.data
+              
+              return (
+                <HabitCard
+                  key={item.id}
+                  itemId={item.id}
+                  habit={habit}
+                  today={today}
+                  onToggleComplete={toggleHabitComplete}
+                  onRemove={() => removeFromToday(item.id)}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onDragEnd={handleDragEnd}
+                  draggedItemId={draggedItemId}
+                  dragOverItemId={dragOverItemId}
+                />
+              )
+            }
+            return null
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function HabitCard({ habit, today, onToggleComplete, onRemove, itemId, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd, draggedItemId, dragOverItemId }: any) {
+  const [completed, setCompleted] = useState(false)
+  const supabase = createClient()
+
+  useEffect(() => {
+    loadCompletionStatus()
+  }, [habit.id, today])
+
+  const loadCompletionStatus = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data } = await supabase
+      .from('habit_completions')
+      .select('completed')
+      .eq('habit_id', habit.id)
+      .eq('date', today)
+      .eq('user_id', user?.id)
+      .single()
+    
+    setCompleted(data?.completed || false)
+  }
+
+  const handleToggle = async () => {
+    const newCompleted = !completed
+    setCompleted(newCompleted)
+    await onToggleComplete(habit.id)
+    // Reload to sync
+    setTimeout(() => loadCompletionStatus(), 100)
+  }
+
+  return (
+    <div
+      draggable
+      onDragStart={(e) => onDragStart(e, itemId)}
+      onDragOver={(e) => onDragOver(e, itemId)}
+      onDragLeave={onDragLeave}
+      onDrop={(e) => onDrop(e, itemId)}
+      onDragEnd={onDragEnd}
+      className={`bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-200 p-3 ${
+        draggedItemId === itemId ? 'opacity-50' : ''
+      } ${
+        dragOverItemId === itemId ? 'border-2 border-green-500' : ''
+      }`}
+      style={{ minHeight: '80px', cursor: 'default' }}
+    >
+      <div className="flex items-start gap-2 h-full">
+        {/* Drag Handle */}
+        <div 
+          className="flex-shrink-0 cursor-grab active:cursor-grabbing pt-0.5"
+          onMouseDown={(e) => e.stopPropagation()}
+          title="Drag to reorder"
+        >
+          <svg className="w-5 h-5 text-gray-400 hover:text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z" />
+          </svg>
+        </div>
+
+        {/* Completion Checkbox */}
+        <input
+          type="checkbox"
+          checked={completed}
+          onChange={handleToggle}
+          className="w-5 h-5 mt-0.5 cursor-pointer flex-shrink-0"
+          style={{ accentColor: '#11551a' }}
+        />
+        
+        {/* Habit Info */}
+        <div className="flex-1 flex flex-col">
+          <h4 className={`font-semibold text-base ${
+            completed ? 'line-through text-gray-400' : 'text-gray-800'
+          }`}>
+            {habit.name}
+          </h4>
+          <span className="text-sm text-gray-500 mt-1">Habit</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function SettingsView({ user }: { user: User }) {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -1385,6 +1912,7 @@ function TasksView() {
   const [categories, setCategories] = useState<any[]>([])
   const [selectedTask, setSelectedTask] = useState<any>(null)
   const [showCategoryManager, setShowCategoryManager] = useState(false)
+  const [todayItems, setTodayItems] = useState<Map<string, boolean>>(new Map())
   
   // Load saved state from localStorage
   const loadSavedState = () => {
@@ -1444,7 +1972,66 @@ function TasksView() {
   useEffect(() => {
     loadTasks()
     loadCategories()
+    loadTodayItems()
   }, [])
+
+  const loadTodayItems = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    const today = new Date().toISOString().split('T')[0]
+    const { data } = await supabase
+      .from('today_items')
+      .select('item_id')
+      .eq('user_id', user?.id)
+      .eq('date', today)
+      .eq('item_type', 'task')
+    
+    const itemsMap = new Map<string, boolean>()
+    if (data) {
+      data.forEach(item => itemsMap.set(item.item_id, true))
+    }
+    setTodayItems(itemsMap)
+  }
+
+  const toggleTaskInToday = async (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const { data: { user } } = await supabase.auth.getUser()
+    const today = new Date().toISOString().split('T')[0]
+    const isInToday = todayItems.get(taskId)
+    
+    if (isInToday) {
+      // Remove from today
+      await supabase
+        .from('today_items')
+        .delete()
+        .eq('user_id', user?.id)
+        .eq('date', today)
+        .eq('item_type', 'task')
+        .eq('item_id', taskId)
+    } else {
+      // Add to today - get max sort_order and add 1
+      const { data: existing } = await supabase
+        .from('today_items')
+        .select('sort_order')
+        .eq('user_id', user?.id)
+        .eq('date', today)
+        .order('sort_order', { ascending: false })
+        .limit(1)
+      
+      const maxSortOrder = existing && existing.length > 0 ? existing[0].sort_order : -1
+      
+      await supabase
+        .from('today_items')
+        .insert({
+          user_id: user?.id,
+          item_type: 'task',
+          item_id: taskId,
+          date: today,
+          sort_order: maxSortOrder + 1
+        })
+    }
+    
+    loadTodayItems()
+  }
 
   const loadTasks = async () => {
     const { data } = await supabase
@@ -2453,15 +3040,28 @@ function TasksView() {
                     style={{ minHeight: '120px', maxHeight: '120px' }}
                   >
                     <div className="flex items-start gap-2 h-full">
-                      {/* Completion Checkbox */}
-                      <input
-                        type="checkbox"
-                        checked={task.status === 'Complete'}
-                        onChange={(e) => toggleComplete(task, e as any)}
-                        className="w-5 h-5 mt-0.5 cursor-pointer flex-shrink-0 accent-green-600"
-                        title={task.status === 'Complete' ? 'Mark as incomplete' : 'Mark as complete'}
-                        style={{ accentColor: '#11551a' }}
-                      />
+                      <div className="flex flex-col gap-1 flex-shrink-0">
+                        {/* Completion Checkbox */}
+                        <input
+                          type="checkbox"
+                          checked={task.status === 'Complete'}
+                          onChange={(e) => toggleComplete(task, e as any)}
+                          className="w-5 h-5 mt-0.5 cursor-pointer accent-green-600"
+                          title={task.status === 'Complete' ? 'Mark as incomplete' : 'Mark as complete'}
+                          style={{ accentColor: '#11551a' }}
+                        />
+                        {/* Today Circle Button */}
+                        <button
+                          onClick={(e) => toggleTaskInToday(task.id, e)}
+                          className={`w-5 h-5 rounded-full border-2 flex-shrink-0 transition-all ${
+                            todayItems.get(task.id)
+                              ? 'bg-green-600 border-green-600'
+                              : 'border-gray-400 hover:border-green-600'
+                          }`}
+                          title={todayItems.get(task.id) ? 'Remove from today' : 'Add to today'}
+                          style={todayItems.get(task.id) ? { backgroundColor: '#11551a', borderColor: '#11551a' } : {}}
+                        />
+                      </div>
                       
                       {/* Task Info */}
                       <div 
@@ -2542,15 +3142,28 @@ function TasksView() {
                 style={{ minHeight: '120px' }}
               >
                 <div className="flex items-start gap-2 h-full">
-                  {/* Completion Checkbox */}
-                  <input
-                    type="checkbox"
-                    checked={task.status === 'Complete'}
-                    onChange={(e) => toggleComplete(task, e as any)}
-                    className="w-6 h-6 mt-0.5 cursor-pointer flex-shrink-0"
-                    title={task.status === 'Complete' ? 'Mark as incomplete' : 'Mark as complete'}
-                    style={{ accentColor: '#11551a' }}
-                  />
+                  <div className="flex flex-col gap-1 flex-shrink-0">
+                    {/* Completion Checkbox */}
+                    <input
+                      type="checkbox"
+                      checked={task.status === 'Complete'}
+                      onChange={(e) => toggleComplete(task, e as any)}
+                      className="w-6 h-6 mt-0.5 cursor-pointer"
+                      title={task.status === 'Complete' ? 'Mark as incomplete' : 'Mark as complete'}
+                      style={{ accentColor: '#11551a' }}
+                    />
+                    {/* Today Circle Button */}
+                    <button
+                      onClick={(e) => toggleTaskInToday(task.id, e)}
+                      className={`w-6 h-6 rounded-full border-2 flex-shrink-0 transition-all ${
+                        todayItems.get(task.id)
+                          ? 'bg-green-600 border-green-600'
+                          : 'border-gray-400 hover:border-green-600'
+                      }`}
+                      title={todayItems.get(task.id) ? 'Remove from today' : 'Add to today'}
+                      style={todayItems.get(task.id) ? { backgroundColor: '#11551a', borderColor: '#11551a' } : {}}
+                    />
+                  </div>
                   
                   {/* Task Info */}
                   <div 
@@ -3846,6 +4459,7 @@ function JournalView() {
   const [calibrations, setCalibrations] = useState<any[]>([])
   const [habitCompletions, setHabitCompletions] = useState<Map<string, boolean>>(new Map())
   const [calibrationScores, setCalibrationScores] = useState<Map<string, number>>(new Map())
+  const [todayItems, setTodayItems] = useState<Map<string, boolean>>(new Map())
   const supabase = createClient()
 
   // Save selectedDate to localStorage whenever it changes
@@ -3863,7 +4477,66 @@ function JournalView() {
     loadHabits()
     loadHabitGroups()
     loadCalibrations()
+    loadTodayItems()
   }, [])
+
+  const loadTodayItems = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    const today = new Date().toISOString().split('T')[0]
+    const { data } = await supabase
+      .from('today_items')
+      .select('item_id')
+      .eq('user_id', user?.id)
+      .eq('date', today)
+      .eq('item_type', 'habit')
+    
+    const itemsMap = new Map<string, boolean>()
+    if (data) {
+      data.forEach(item => itemsMap.set(item.item_id, true))
+    }
+    setTodayItems(itemsMap)
+  }
+
+  const toggleHabitInToday = async (habitId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const { data: { user } } = await supabase.auth.getUser()
+    const today = new Date().toISOString().split('T')[0]
+    const isInToday = todayItems.get(habitId)
+    
+    if (isInToday) {
+      // Remove from today
+      await supabase
+        .from('today_items')
+        .delete()
+        .eq('user_id', user?.id)
+        .eq('date', today)
+        .eq('item_type', 'habit')
+        .eq('item_id', habitId)
+    } else {
+      // Add to today - get max sort_order and add 1
+      const { data: existing } = await supabase
+        .from('today_items')
+        .select('sort_order')
+        .eq('user_id', user?.id)
+        .eq('date', today)
+        .order('sort_order', { ascending: false })
+        .limit(1)
+      
+      const maxSortOrder = existing && existing.length > 0 ? existing[0].sort_order : -1
+      
+      await supabase
+        .from('today_items')
+        .insert({
+          user_id: user?.id,
+          item_type: 'habit',
+          item_id: habitId,
+          date: today,
+          sort_order: maxSortOrder + 1
+        })
+    }
+    
+    loadTodayItems()
+  }
 
   useEffect(() => {
     loadJournalForDate(selectedDate)
@@ -4282,13 +4955,25 @@ function JournalView() {
                           <div className="ml-7 space-y-1.5">
                             {groupHabits.map((habit: any) => (
                               <div key={habit.id} className="flex items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  checked={habitCompletions.get(habit.id) || false}
-                                  onChange={(e) => toggleHabitCompletion(habit.id, e.target.checked)}
-                                  className="w-4 h-4 cursor-pointer"
-                                  style={{ accentColor: '#11551a' }}
-                                />
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="checkbox"
+                                    checked={habitCompletions.get(habit.id) || false}
+                                    onChange={(e) => toggleHabitCompletion(habit.id, e.target.checked)}
+                                    className="w-4 h-4 cursor-pointer"
+                                    style={{ accentColor: '#11551a' }}
+                                  />
+                                  <button
+                                    onClick={(e) => toggleHabitInToday(habit.id, e)}
+                                    className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-all ${
+                                      todayItems.get(habit.id)
+                                        ? 'bg-green-600 border-green-600'
+                                        : 'border-gray-400 hover:border-green-600'
+                                    }`}
+                                    title={todayItems.get(habit.id) ? 'Remove from today' : 'Add to today'}
+                                    style={todayItems.get(habit.id) ? { backgroundColor: '#11551a', borderColor: '#11551a' } : {}}
+                                  />
+                                </div>
                                 <span className="text-lg">{habit.name}</span>
                               </div>
                             ))}
@@ -4299,13 +4984,25 @@ function JournalView() {
                       const habit = item.data
                       return (
                         <div key={habit.id} className="flex items-center gap-2 border border-gray-200 rounded-lg p-2.5 bg-white">
-                          <input
-                            type="checkbox"
-                            checked={habitCompletions.get(habit.id) || false}
-                            onChange={(e) => toggleHabitCompletion(habit.id, e.target.checked)}
-                            className="w-5 h-5 cursor-pointer"
-                            style={{ accentColor: '#11551a' }}
-                          />
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={habitCompletions.get(habit.id) || false}
+                              onChange={(e) => toggleHabitCompletion(habit.id, e.target.checked)}
+                              className="w-5 h-5 cursor-pointer"
+                              style={{ accentColor: '#11551a' }}
+                            />
+                            <button
+                              onClick={(e) => toggleHabitInToday(habit.id, e)}
+                              className={`w-5 h-5 rounded-full border-2 flex-shrink-0 transition-all ${
+                                todayItems.get(habit.id)
+                                  ? 'bg-green-600 border-green-600'
+                                  : 'border-gray-400 hover:border-green-600'
+                              }`}
+                              title={todayItems.get(habit.id) ? 'Remove from today' : 'Add to today'}
+                              style={todayItems.get(habit.id) ? { backgroundColor: '#11551a', borderColor: '#11551a' } : {}}
+                            />
+                          </div>
                           <span className="text-lg">{habit.name}</span>
                         </div>
                       )
