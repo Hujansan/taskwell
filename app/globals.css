@@ -1,3 +1,6 @@
+/* Tailwind v4: make `dark:` respond to the `.dark` class we toggle on <html> */
+@custom-variant dark (.dark &);
+
 @import "tailwindcss";
 
 :root {
@@ -12,11 +15,9 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 body {

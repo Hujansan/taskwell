@@ -16,8 +16,38 @@ export default function Home() {
   const [view, setView] = useState<'dashboard' | 'tasks' | 'journal' | 'today' | 'settings'>('dashboard')
   const [showChangePassword, setShowChangePassword] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [darkMode, setDarkMode] = useState(false)
 
   const supabase = createClient()
+
+  // Load dark mode preference from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('darkMode')
+      const savedDarkMode =
+        saved === null ? window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? false : saved === 'true'
+      setDarkMode(savedDarkMode)
+      if (savedDarkMode) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    }
+  }, [])
+
+  // Apply dark mode class to html element when darkMode changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const html = document.documentElement
+      if (darkMode) {
+        html.classList.add('dark')
+        localStorage.setItem('darkMode', 'true')
+      } else {
+        html.classList.remove('dark')
+        localStorage.setItem('darkMode', 'false')
+      }
+    }
+  }, [darkMode])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -137,18 +167,18 @@ export default function Home() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F7F7F8' }}>
-        <div className="max-w-md w-full p-6 bg-white rounded-xl shadow-lg">
-          <h2 className="text-3xl font-bold text-center mb-6" style={{ color: '#11551a' }}>Welcome</h2>
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F8] dark:bg-gray-900">
+        <div className="max-w-md w-full p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+          <h2 className="text-3xl font-bold text-center mb-6 dark:text-white" style={{ color: '#11551a' }}>Welcome</h2>
           
           {error && (
-            <div className="bg-red-50 text-red-700 px-3 py-2 rounded-lg mb-4 text-lg">
+            <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-3 py-2 rounded-lg mb-4 text-lg">
               {error}
             </div>
           )}
           
           {success && (
-            <div style={{ backgroundColor: '#e8f5e9' }} className="text-green-800 px-3 py-2 rounded-lg mb-4 text-lg">
+            <div className="bg-[#e8f5e9] dark:bg-green-900/30 text-green-800 dark:text-green-400 px-3 py-2 rounded-lg mb-4 text-lg">
               {success}
             </div>
           )}
@@ -161,7 +191,7 @@ export default function Home() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSignIn()}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               />
               <input
                 type="password"
@@ -169,7 +199,7 @@ export default function Home() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSignIn()}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               />
               <div className="flex gap-3">
                 <button
@@ -221,7 +251,7 @@ export default function Home() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSignUp()}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               />
               <input
                 type="password"
@@ -229,7 +259,7 @@ export default function Home() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSignUp()}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               />
               <div className="flex gap-3">
                 <button
@@ -258,7 +288,7 @@ export default function Home() {
 
           {authView === 'forgot' && (
             <div className="space-y-3">
-              <p className="text-gray-600 text-center text-lg">
+              <p className="text-gray-600 dark:text-gray-300 text-center text-lg">
                 Enter your email address and we'll send you a link to reset your password.
               </p>
               <input
@@ -267,7 +297,7 @@ export default function Home() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleForgotPassword()}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               />
               <div className="flex gap-3">
                 <button
@@ -314,8 +344,8 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F7F7F8' }}>
-      <nav className="bg-white shadow-md">
+    <div className="min-h-screen bg-[#F7F7F8] dark:bg-gray-900">
+      <nav className="bg-white dark:bg-gray-800 shadow-md">
         <div className="max-w-7xl mx-auto px-4 py-3">
           {/* Desktop Layout */}
           <div className="hidden md:flex justify-between items-center">
@@ -340,95 +370,50 @@ export default function Home() {
               <button
                 onClick={() => setView('dashboard')}
                 className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-                  view === 'dashboard' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                  view === 'dashboard'
+                    ? 'text-white shadow-md bg-[#11551a]'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                 }`}
-                style={view === 'dashboard' ? { backgroundColor: '#11551a' } : {}}
-                onMouseEnter={(e) => {
-                  if (view !== 'dashboard') {
-                    e.currentTarget.style.backgroundColor = '#e0e0e0'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (view !== 'dashboard') {
-                    e.currentTarget.style.backgroundColor = '#e5e7eb'
-                  }
-                }}
               >
                 Dashboard
               </button>
               <button
                 onClick={() => setView('tasks')}
                 className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-                  view === 'tasks' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                  view === 'tasks'
+                    ? 'text-white shadow-md bg-[#11551a]'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                 }`}
-                style={view === 'tasks' ? { backgroundColor: '#11551a' } : {}}
-                onMouseEnter={(e) => {
-                  if (view !== 'tasks') {
-                    e.currentTarget.style.backgroundColor = '#e0e0e0'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (view !== 'tasks') {
-                    e.currentTarget.style.backgroundColor = '#e5e7eb'
-                  }
-                }}
               >
                 Tasks
               </button>
               <button
                 onClick={() => setView('journal')}
                 className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-                  view === 'journal' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                  view === 'journal'
+                    ? 'text-white shadow-md bg-[#11551a]'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                 }`}
-                style={view === 'journal' ? { backgroundColor: '#11551a' } : {}}
-                onMouseEnter={(e) => {
-                  if (view !== 'journal') {
-                    e.currentTarget.style.backgroundColor = '#e0e0e0'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (view !== 'journal') {
-                    e.currentTarget.style.backgroundColor = '#e5e7eb'
-                  }
-                }}
               >
                 Journal
               </button>
               <button
                 onClick={() => setView('today')}
                 className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-                  view === 'today' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                  view === 'today'
+                    ? 'text-white shadow-md bg-[#11551a]'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                 }`}
-                style={view === 'today' ? { backgroundColor: '#11551a' } : {}}
-                onMouseEnter={(e) => {
-                  if (view !== 'today') {
-                    e.currentTarget.style.backgroundColor = '#e0e0e0'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (view !== 'today') {
-                    e.currentTarget.style.backgroundColor = '#e5e7eb'
-                  }
-                }}
               >
-                Today
+                Workflow
               </button>
               <button
                 onClick={() => setView('settings')}
                 className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-                  view === 'settings' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                  view === 'settings'
+                    ? 'text-white shadow-md bg-[#11551a]'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                 }`}
-                style={view === 'settings' ? { backgroundColor: '#11551a' } : {}}
-                onMouseEnter={(e) => {
-                  if (view !== 'settings') {
-                    e.currentTarget.style.backgroundColor = '#e0e0e0'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (view !== 'settings') {
-                    e.currentTarget.style.backgroundColor = '#e5e7eb'
-                  }
-                }}
               >
                 Settings
               </button>
@@ -499,7 +484,7 @@ export default function Home() {
                     setMobileMenuOpen(false)
                   }}
                   className={`w-full px-4 py-2.5 rounded-lg text-base font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
-                    view === 'dashboard' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                    view === 'dashboard' ? 'text-white shadow-md' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                   }`}
                   style={view === 'dashboard' ? { backgroundColor: '#11551a' } : {}}
                 >
@@ -511,7 +496,7 @@ export default function Home() {
                     setMobileMenuOpen(false)
                   }}
                   className={`w-full px-4 py-2.5 rounded-lg text-base font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
-                    view === 'tasks' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                    view === 'tasks' ? 'text-white shadow-md' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                   }`}
                   style={view === 'tasks' ? { backgroundColor: '#11551a' } : {}}
                 >
@@ -523,7 +508,7 @@ export default function Home() {
                     setMobileMenuOpen(false)
                   }}
                   className={`w-full px-4 py-2.5 rounded-lg text-base font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
-                    view === 'journal' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                    view === 'journal' ? 'text-white shadow-md' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                   }`}
                   style={view === 'journal' ? { backgroundColor: '#11551a' } : {}}
                 >
@@ -535,11 +520,11 @@ export default function Home() {
                     setMobileMenuOpen(false)
                   }}
                   className={`w-full px-4 py-2.5 rounded-lg text-base font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
-                    view === 'today' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                    view === 'today' ? 'text-white shadow-md' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                   }`}
                   style={view === 'today' ? { backgroundColor: '#11551a' } : {}}
                 >
-                  Today
+                  Workflow
                 </button>
                 <button
                   onClick={() => {
@@ -547,7 +532,7 @@ export default function Home() {
                     setMobileMenuOpen(false)
                   }}
                   className={`w-full px-4 py-2.5 rounded-lg text-base font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
-                    view === 'settings' ? 'text-white shadow-md' : 'bg-gray-200 text-gray-700'
+                    view === 'settings' ? 'text-white shadow-md' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                   }`}
                   style={view === 'settings' ? { backgroundColor: '#11551a' } : {}}
                 >
@@ -570,7 +555,7 @@ export default function Home() {
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {view === 'dashboard' ? <DashboardView /> : view === 'tasks' ? <TasksView /> : view === 'journal' ? <JournalView /> : view === 'today' ? <TodayView /> : <SettingsView user={user} />}
+        {view === 'dashboard' ? <DashboardView /> : view === 'tasks' ? <TasksView /> : view === 'journal' ? <JournalView /> : view === 'today' ? <TodayView /> : <SettingsView user={user} darkMode={darkMode} setDarkMode={setDarkMode} />}
       </div>
     </div>
   )
@@ -589,7 +574,7 @@ function ResetPasswordForm({ onReset, onCancel, error, success, loading }: any) 
 
   return (
     <div className="space-y-3">
-      <p className="text-gray-600 text-center text-lg">
+      <p className="text-gray-600 dark:text-gray-300 text-center text-lg">
         Enter your new password below.
       </p>
       <input
@@ -598,7 +583,7 @@ function ResetPasswordForm({ onReset, onCancel, error, success, loading }: any) 
         value={newPassword}
         onChange={(e) => setNewPassword(e.target.value)}
         onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all"
+        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
       />
       <input
         type="password"
@@ -606,10 +591,10 @@ function ResetPasswordForm({ onReset, onCancel, error, success, loading }: any) 
         value={confirmPassword}
         onChange={(e) => setConfirmPassword(e.target.value)}
         onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all"
+        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
       />
       {newPassword && confirmPassword && newPassword !== confirmPassword && (
-        <p className="text-red-600 text-lg">Passwords do not match</p>
+        <p className="text-red-600 dark:text-red-400 text-lg">Passwords do not match</p>
       )}
       <div className="flex gap-3">
         <button
@@ -918,22 +903,22 @@ function DashboardView() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Overall Score Summary */}
-        <div className="bg-white rounded-xl shadow-lg p-5">
-          <h3 className="text-lg font-semibold text-gray-700 mb-3">Overall Score</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5">
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Overall Score</h3>
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Yesterday:</span>
+              <span className="text-gray-600 dark:text-gray-400">Yesterday:</span>
               <span className="font-bold text-2xl" style={{ color: '#11551a' }}>
                 {dailyData.length >= 2 ? Math.round(calculateOverallScore(dailyData[dailyData.length - 2])) : '-'}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">10-day Avg:</span>
+              <span className="text-gray-600 dark:text-gray-400">10-day Avg:</span>
               <span className="font-bold text-3xl" style={{ color: '#11551a' }}>
                 {dailyData.length > 0 ? Math.round(calculateOverallScoreAverage()) : '-'}
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mt-2">
               <div 
                 className="h-3 rounded-full transition-all"
                 style={{ 
@@ -946,22 +931,22 @@ function DashboardView() {
         </div>
 
         {/* Tasks Summary */}
-        <div className="bg-white rounded-xl shadow-lg p-5">
-          <h3 className="text-lg font-semibold text-gray-700 mb-3">Tasks</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5">
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Tasks</h3>
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Yesterday:</span>
+              <span className="text-gray-600 dark:text-gray-400">Yesterday:</span>
               <span className="font-bold text-2xl" style={{ color: '#11551a' }}>
                 {dailyData.length >= 2 ? dailyData[dailyData.length - 2].taskPoints : '-'}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">10-day Avg:</span>
+              <span className="text-gray-600 dark:text-gray-400">10-day Avg:</span>
               <span className="font-bold text-3xl" style={{ color: '#11551a' }}>
                 {dailyData.length > 0 ? Math.round(avgPoints) : '-'}
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mt-2">
               <div 
                 className="h-3 rounded-full transition-all"
                 style={{ 
@@ -974,22 +959,22 @@ function DashboardView() {
         </div>
 
         {/* Habits Summary */}
-        <div className="bg-white rounded-xl shadow-lg p-5">
-          <h3 className="text-lg font-semibold text-gray-700 mb-3">Habits</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5">
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Habits</h3>
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Yesterday:</span>
+              <span className="text-gray-600 dark:text-gray-400">Yesterday:</span>
               <span className="font-bold text-2xl" style={{ color: '#11551a' }}>
                 {dailyData.length >= 2 ? Math.round(calculateHabitsScore(dailyData[dailyData.length - 2])) : '-'}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">10-day Avg:</span>
+              <span className="text-gray-600 dark:text-gray-400">10-day Avg:</span>
               <span className="font-bold text-3xl" style={{ color: '#11551a' }}>
                 {dailyData.length > 0 ? Math.round(calculateHabitsScoreAverage()) : '-'}
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mt-2">
               <div 
                 className="h-3 rounded-full transition-all"
                 style={{ 
@@ -1002,22 +987,22 @@ function DashboardView() {
         </div>
 
         {/* Calibration Summary */}
-        <div className="bg-white rounded-xl shadow-lg p-5">
-          <h3 className="text-lg font-semibold text-gray-700 mb-3">Calibration</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5">
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Calibration</h3>
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Yesterday:</span>
+              <span className="text-gray-600 dark:text-gray-400">Yesterday:</span>
               <span className="font-bold text-2xl" style={{ color: '#11551a' }}>
                 {dailyData.length >= 2 ? Math.round(calculateCalibrationScore(dailyData[dailyData.length - 2])) : '-'}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">10-day Avg:</span>
+              <span className="text-gray-600 dark:text-gray-400">10-day Avg:</span>
               <span className="font-bold text-3xl" style={{ color: '#11551a' }}>
                 {dailyData.length > 0 ? Math.round(calculateCalibrationScoreAverage()) : '-'}
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mt-2">
               <div 
                 className="h-3 rounded-full transition-all"
                 style={{ 
@@ -1031,13 +1016,13 @@ function DashboardView() {
       </div>
 
       {/* Daily Progress Charts */}
-      <div className="bg-white rounded-xl shadow-lg p-3 md:p-5">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3 md:p-5">
         <h3 className="text-xl font-bold mb-5" style={{ color: '#11551a' }}>Daily Progress (Last 10 Days)</h3>
         
         <div className="space-y-6">
           {/* Task Points Chart */}
           <div>
-            <h4 className="text-lg font-semibold text-gray-700 mb-3">Task Points</h4>
+            <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Task Points</h4>
             {/* Desktop: Horizontal bars */}
             <div className="hidden md:flex items-end justify-between gap-2 h-48">
               {dailyData.map((day, index) => (
@@ -1090,7 +1075,7 @@ function DashboardView() {
 
           {/* Habits Chart */}
           <div>
-            <h4 className="text-lg font-semibold text-gray-700 mb-3">Habits Completed</h4>
+            <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Habits Completed</h4>
             {/* Desktop: Horizontal bars */}
             <div className="hidden md:flex items-end justify-between gap-2 h-48">
               {dailyData.map((day, index) => (
@@ -1143,7 +1128,7 @@ function DashboardView() {
 
           {/* Calibration Chart */}
           <div>
-            <h4 className="text-lg font-semibold text-gray-700 mb-3">Average Calibration Score</h4>
+            <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Average Calibration Score</h4>
             {/* Desktop: Horizontal bars */}
             <div className="hidden md:flex items-end justify-between gap-2 h-48">
               {dailyData.map((day, index) => (
@@ -1198,12 +1183,12 @@ function DashboardView() {
 
       {/* Status and Category Breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl shadow-lg p-5">
-          <h3 className="text-lg font-semibold text-gray-700 mb-4">Tasks by Status</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5">
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Tasks by Status</h3>
           <div className="space-y-2">
             {statusBreakdown.map(({ status, count }) => (
               <div key={status} className="flex items-center justify-between">
-                <span className="text-gray-600">{status}:</span>
+                <span className="text-gray-600 dark:text-gray-400">{status}:</span>
                 <div className="flex items-center gap-3">
                   <div className="w-32 bg-gray-200 rounded-full h-4">
                     <div
@@ -1221,12 +1206,12 @@ function DashboardView() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-5">
-          <h3 className="text-lg font-semibold text-gray-700 mb-4">Tasks by Category</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5">
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Tasks by Category</h3>
           <div className="space-y-2">
             {categoryBreakdown.map(({ category, count }) => (
               <div key={category.id} className="flex items-center justify-between">
-                <span className="text-gray-600">{category.name}:</span>
+                <span className="text-gray-600 dark:text-gray-400">{category.name}:</span>
                 <div className="flex items-center gap-3">
                   <div className="w-32 bg-gray-200 rounded-full h-4">
                     <div
@@ -1469,9 +1454,112 @@ function TodayView() {
   const itemsWithData = getTodayItemsWithData()
   const sortedItems = [...itemsWithData].sort((a, b) => a.sort_order - b.sort_order)
 
+  const clearCompleted = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    // Clear completed tasks
+    for (const item of todayItems) {
+      if (item.item_type === 'task') {
+        const task = tasks.find(t => t.id === item.item_id)
+        if (task && task.status === 'Complete') {
+          await supabase
+            .from('tasks')
+            .update({
+              status: 'To do',
+              completion_date: null
+            })
+            .eq('id', task.id)
+        }
+      } else if (item.item_type === 'habit') {
+        const habit = habits.find(h => h.id === item.item_id)
+        if (habit) {
+          // Check if habit is completed for today
+          const { data: completion } = await supabase
+            .from('habit_completions')
+            .select('completed')
+            .eq('habit_id', habit.id)
+            .eq('date', today)
+            .eq('user_id', user?.id)
+            .maybeSingle()
+          
+          if (completion?.completed) {
+            await supabase
+              .from('habit_completions')
+              .upsert({
+                habit_id: habit.id,
+                date: today,
+                user_id: user?.id,
+                completed: false
+              }, {
+                onConflict: 'habit_id,date,user_id'
+              })
+          }
+        }
+      }
+    }
+    
+    loadTasks()
+    loadHabits()
+    loadTodayItems()
+  }
+
+  const clearAll = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    // Clear all tasks
+    for (const item of todayItems) {
+      if (item.item_type === 'task') {
+        const task = tasks.find(t => t.id === item.item_id)
+        if (task) {
+          await supabase
+            .from('tasks')
+            .update({
+              status: 'To do',
+              completion_date: null
+            })
+            .eq('id', task.id)
+        }
+      } else if (item.item_type === 'habit') {
+        const habit = habits.find(h => h.id === item.item_id)
+        if (habit) {
+          await supabase
+            .from('habit_completions')
+            .upsert({
+              habit_id: habit.id,
+              date: today,
+              user_id: user?.id,
+              completed: false
+            }, {
+              onConflict: 'habit_id,date,user_id'
+            })
+        }
+      }
+    }
+    
+    loadTasks()
+    loadHabits()
+    loadTodayItems()
+  }
+
   return (
-    <div className="bg-white rounded-xl shadow-lg p-5">
-      <h2 className="text-2xl font-bold mb-5" style={{ color: '#11551a' }}>Today</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3">
+        <h2 className="text-2xl font-bold dark:text-white" style={{ color: '#11551a' }}>Workflow</h2>
+        <div className="flex gap-2">
+          <button
+            onClick={clearCompleted}
+            className="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
+          >
+            Clear completed
+          </button>
+          <button
+            onClick={clearAll}
+            className="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
+          >
+            Clear all
+          </button>
+        </div>
+      </div>
       
       {selectedTask ? (
         /* Task Detail View */
@@ -1520,7 +1608,7 @@ function TodayView() {
         />
       ) : sortedItems.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No items selected for today</p>
+          <p className="text-gray-500 dark:text-gray-400 text-lg">No items selected for today</p>
           <p className="text-gray-400 text-base mt-2">Add tasks from the Tasks page or habits from the Journal page</p>
         </div>
       ) : (
@@ -1536,10 +1624,10 @@ function TodayView() {
                   onDragOver={(e) => handleDragOver(e, item.id)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, item.id)}
-                  className={`bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-200 p-3 group ${
+                  className={`bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-all duration-200 p-3 group ${
                     dragOverItemId === item.id ? 'border-2 border-green-500' : ''
                   }`}
-                  style={{ minHeight: '120px' }}
+                  style={{ minHeight: '80px' }}
                 >
                   <div className="flex items-start gap-2 h-full">
                     {/* Drag Handle */}
@@ -1560,18 +1648,38 @@ function TodayView() {
                       </svg>
                     </div>
 
-                    {/* Completion Checkbox */}
-                    <input
-                      type="checkbox"
-                      checked={isComplete}
-                      onChange={(e) => {
-                        e.stopPropagation()
-                        toggleTaskComplete(task, e as any)
-                      }}
-                      className="w-5 h-5 mt-0.5 cursor-pointer flex-shrink-0"
-                      style={{ accentColor: '#11551a' }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
+                    {/* Completion Checkbox and Remove Button */}
+                    <div className="flex flex-col gap-1 flex-shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={isComplete}
+                        onChange={(e) => {
+                          e.stopPropagation()
+                          toggleTaskComplete(task, e as any)
+                        }}
+                        className="w-5 h-5 mt-0.5 cursor-pointer"
+                        style={{ accentColor: '#11551a' }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      {/* Remove Circle Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          removeFromToday(item.id)
+                        }}
+                        className="w-5 h-5 rounded-full border-2 bg-green-600 border-green-600 hover:border-red-600 hover:bg-red-50 flex-shrink-0 transition-all"
+                        title="Remove from today"
+                        style={{ backgroundColor: '#11551a', borderColor: '#11551a' }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = '#dc2626'
+                          e.currentTarget.style.backgroundColor = '#fee2e2'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#11551a'
+                          e.currentTarget.style.backgroundColor = '#11551a'
+                        }}
+                      />
+                    </div>
                     
                     {/* Task Info - Clickable to open detail view */}
                     <div 
@@ -1582,7 +1690,7 @@ function TodayView() {
                         <div className="flex-1">
                           <div className="flex items-center gap-1.5">
                             <h4 className={`font-semibold text-base transition-colors ${
-                              isComplete ? 'line-through text-gray-400' : 'text-gray-800 group-hover:text-green-700'
+                              isComplete ? 'line-through text-gray-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-green-700 dark:group-hover:text-green-400'
                             }`}>
                               {task.title}
                             </h4>
@@ -1705,7 +1813,7 @@ function HabitCard({ habit, today, onToggleComplete, onRemove, itemId, onDragSta
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, itemId)}
       onDragEnd={onDragEnd}
-      className={`bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-200 p-3 ${
+      className={`bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-all duration-200 p-3 ${
         draggedItemId === itemId ? 'opacity-50' : ''
       } ${
         dragOverItemId === itemId ? 'border-2 border-green-500' : ''
@@ -1724,19 +1832,39 @@ function HabitCard({ habit, today, onToggleComplete, onRemove, itemId, onDragSta
           </svg>
         </div>
 
-        {/* Completion Checkbox */}
-        <input
-          type="checkbox"
-          checked={completed}
-          onChange={handleToggle}
-          className="w-5 h-5 mt-0.5 cursor-pointer flex-shrink-0"
-          style={{ accentColor: '#11551a' }}
-        />
+        {/* Completion Checkbox and Remove Button */}
+        <div className="flex flex-col gap-1 flex-shrink-0">
+          <input
+            type="checkbox"
+            checked={completed}
+            onChange={handleToggle}
+            className="w-5 h-5 mt-0.5 cursor-pointer"
+            style={{ accentColor: '#11551a' }}
+          />
+          {/* Remove Circle Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onRemove()
+            }}
+            className="w-5 h-5 rounded-full border-2 bg-green-600 border-green-600 hover:border-red-600 hover:bg-red-50 flex-shrink-0 transition-all"
+            title="Remove from today"
+            style={{ backgroundColor: '#11551a', borderColor: '#11551a' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#dc2626'
+              e.currentTarget.style.backgroundColor = '#fee2e2'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#11551a'
+              e.currentTarget.style.backgroundColor = '#11551a'
+            }}
+          />
+        </div>
         
         {/* Habit Info */}
         <div className="flex-1 flex flex-col">
           <h4 className={`font-semibold text-base ${
-            completed ? 'line-through text-gray-400' : 'text-gray-800'
+            completed ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'
           }`}>
             {habit.name}
           </h4>
@@ -1747,7 +1875,7 @@ function HabitCard({ habit, today, onToggleComplete, onRemove, itemId, onDragSta
   )
 }
 
-function SettingsView({ user }: { user: User }) {
+function SettingsView({ user, darkMode, setDarkMode }: { user: User; darkMode: boolean; setDarkMode: (value: boolean) => void }) {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -1814,75 +1942,107 @@ function SettingsView({ user }: { user: User }) {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-5">
-      <h2 className="text-2xl font-bold mb-5" style={{ color: '#11551a' }}>Settings</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5">
+      <h2 className="text-2xl font-bold mb-5 dark:text-white" style={{ color: '#11551a' }}>Settings</h2>
       
       <div className="space-y-5">
+        {/* Dark Mode Toggle */}
+        <div>
+          <h3 className="text-lg font-semibold mb-3 dark:text-white">Appearance</h3>
+          <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-lg font-medium text-gray-900 dark:text-white mb-1">Dark Mode</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Toggle dark mode for a better viewing experience in low light</p>
+              </div>
+              <button
+                onClick={() => {
+                  setDarkMode(!darkMode)
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  darkMode ? 'bg-green-600' : 'bg-gray-300'
+                }`}
+                style={darkMode ? { backgroundColor: '#11551a' } : {}}
+                role="switch"
+                aria-checked={darkMode}
+                aria-label="Toggle dark mode"
+                type="button"
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    darkMode ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* User Info */}
         <div>
-          <h3 className="text-lg font-semibold mb-2">Account Information</h3>
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <p className="text-lg text-gray-600 mb-1">Email</p>
-            <p className="text-gray-900">{user.email}</p>
+          <h3 className="text-lg font-semibold mb-2 dark:text-white">Account Information</h3>
+          <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+            <p className="text-lg text-gray-600 dark:text-gray-300 mb-1">Email</p>
+            <p className="text-gray-900 dark:text-white">{user.email}</p>
           </div>
         </div>
 
         {/* Change Password */}
         <div>
-          <h3 className="text-lg font-semibold mb-3">Change Password</h3>
+          <h3 className="text-lg font-semibold mb-3 dark:text-white">Change Password</h3>
           
           {error && (
-            <div className="bg-red-50 text-red-700 px-3 py-2 rounded-lg mb-3 text-lg">
+            <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-3 py-2 rounded-lg mb-3 text-lg">
               {error}
             </div>
           )}
           
           {success && (
-            <div style={{ backgroundColor: '#e8f5e9' }} className="text-green-800 px-3 py-2 rounded-lg mb-3 text-lg">
+            <div className="bg-[#e8f5e9] dark:bg-green-900/30 text-green-800 dark:text-green-400 px-3 py-2 rounded-lg mb-3 text-lg">
               {success}
             </div>
           )}
 
           <div className="space-y-3">
             <div>
-              <label className="block text-lg font-medium text-gray-700 mb-1">
+              <label className="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Current Password
               </label>
               <input
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 placeholder="Enter current password"
               />
             </div>
             
             <div>
-              <label className="block text-lg font-medium text-gray-700 mb-1">
+              <label className="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">
                 New Password
               </label>
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 placeholder="Enter new password (min. 6 characters)"
               />
             </div>
             
             <div>
-              <label className="block text-lg font-medium text-gray-700 mb-1">
+              <label className="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Confirm New Password
               </label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 placeholder="Confirm new password"
               />
               {newPassword && confirmPassword && newPassword !== confirmPassword && (
-                <p className="text-red-600 text-lg mt-1">Passwords do not match</p>
+                <p className="text-red-600 dark:text-red-400 text-lg mt-1">Passwords do not match</p>
               )}
             </div>
             
@@ -1930,7 +2090,7 @@ function TasksView() {
           ? new Set<string>([parsed.dateFilter])
           : new Set<string>(['All'])
         const result = {
-          sortBy: parsed.sortBy || 'due_date',
+          sortBy: (parsed.sortBy === 'completion_date' ? 'completion_date' : parsed.sortBy === 'status' ? 'status' : parsed.sortBy === 'category' ? 'category' : parsed.sortBy === 'title' ? 'title' : 'due_date') as 'due_date' | 'completion_date' | 'status' | 'category' | 'title',
           sortOrder: parsed.sortOrder || 'desc',
           statusFilters: statusFiltersSet,
           dateFilters: dateFiltersSet,
@@ -1945,11 +2105,16 @@ function TasksView() {
   }
 
   const savedState = loadSavedState()
-  const [sortBy, setSortBy] = useState<'due_date' | 'status'>(savedState?.sortBy || 'due_date')
+  const [sortBy, setSortBy] = useState<'due_date' | 'completion_date' | 'status' | 'category' | 'title'>(
+    (savedState?.sortBy === 'completion_date' || savedState?.sortBy === 'status' || savedState?.sortBy === 'due_date' || savedState?.sortBy === 'category' || savedState?.sortBy === 'title') 
+      ? savedState.sortBy 
+      : 'due_date'
+  )
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(savedState?.sortOrder || 'desc')
-  const [statusFilters, setStatusFilters] = useState<Set<string>>(savedState?.statusFilters || new Set())
+  const [statusFilters, setStatusFilters] = useState<Set<string>>(savedState?.statusFilters || new Set(['All']))
   const [dateFilters, setDateFilters] = useState<Set<string>>(savedState?.dateFilters || new Set(['All']))
   const [categoryFilters, setCategoryFilters] = useState<Set<string>>(savedState?.categoryFilters || new Set(['All']))
+  const [searchTerm, setSearchTerm] = useState<string>('')
   const [mobileFilterTab, setMobileFilterTab] = useState<'Status' | 'Date' | 'Category' | 'Sort'>('Status')
   const supabase = createClient()
 
@@ -2304,7 +2469,7 @@ function TasksView() {
     let filtered = [...tasks]
 
     // Apply status filter
-    if (statusFilters.size > 0) {
+    if (statusFilters.size > 0 && !statusFilters.has('All')) {
       filtered = filtered.filter(task => {
         // Check if "Ongoing" is selected
         if (statusFilters.has('Ongoing')) {
@@ -2329,7 +2494,7 @@ function TasksView() {
       sevenDaysFromNow.setDate(today.getDate() + 7)
       const sevenDaysStr = sevenDaysFromNow.toISOString().split('T')[0]
       const sevenDaysAgo = new Date(today)
-      sevenDaysAgo.setDate(today.getDate() - 7)
+      sevenDaysAgo.setDate(today.getDate() - 6)
       const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
 
       filtered = filtered.filter(task => {
@@ -2364,13 +2529,25 @@ function TasksView() {
       })
     }
 
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase().trim()
+      filtered = filtered.filter(task => {
+        const titleMatch = task.title?.toLowerCase().includes(searchLower) || false
+        const descriptionMatch = task.description?.toLowerCase().includes(searchLower) || false
+        return titleMatch || descriptionMatch
+      })
+    }
+
     return filtered
   }
 
   // Get task count for a specific status filter option
   const getStatusCount = (statusOption: string, baseTasks: any[]) => {
     let count = 0
-    if (statusOption === 'Ongoing') {
+    if (statusOption === 'All') {
+      count = baseTasks.length
+    } else if (statusOption === 'Ongoing') {
       count = baseTasks.filter(t => ['To do', 'In progress', 'Waiting'].includes(t.status)).length
     } else {
       count = baseTasks.filter(t => t.status === statusOption).length
@@ -2387,7 +2564,7 @@ function TasksView() {
     sevenDaysFromNow.setDate(today.getDate() + 7)
     const sevenDaysStr = sevenDaysFromNow.toISOString().split('T')[0]
     const sevenDaysAgo = new Date(today)
-    sevenDaysAgo.setDate(today.getDate() - 7)
+    sevenDaysAgo.setDate(today.getDate() - 6)
     const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
 
     if (dateOption === 'All') {
@@ -2451,7 +2628,7 @@ function TasksView() {
       sevenDaysFromNow.setDate(today.getDate() + 7)
       const sevenDaysStr = sevenDaysFromNow.toISOString().split('T')[0]
       const sevenDaysAgo = new Date(today)
-      sevenDaysAgo.setDate(today.getDate() - 7)
+      sevenDaysAgo.setDate(today.getDate() - 6)
       const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
 
       base = base.filter(task => {
@@ -2493,7 +2670,7 @@ function TasksView() {
     let base = [...tasks]
 
     // Apply status filter
-    if (statusFilters.size > 0) {
+    if (statusFilters.size > 0 && !statusFilters.has('All')) {
       base = base.filter(task => {
         if (statusFilters.has('Ongoing')) {
           if (['To do', 'In progress', 'Waiting'].includes(task.status)) {
@@ -2528,7 +2705,7 @@ function TasksView() {
     let base = [...tasks]
 
     // Apply status filter
-    if (statusFilters.size > 0) {
+    if (statusFilters.size > 0 && !statusFilters.has('All')) {
       base = base.filter(task => {
         if (statusFilters.has('Ongoing')) {
           if (['To do', 'In progress', 'Waiting'].includes(task.status)) {
@@ -2551,7 +2728,7 @@ function TasksView() {
       sevenDaysFromNow.setDate(today.getDate() + 7)
       const sevenDaysStr = sevenDaysFromNow.toISOString().split('T')[0]
       const sevenDaysAgo = new Date(today)
-      sevenDaysAgo.setDate(today.getDate() - 7)
+      sevenDaysAgo.setDate(today.getDate() - 6)
       const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
 
       base = base.filter(task => {
@@ -2590,12 +2767,41 @@ function TasksView() {
         const dateA = new Date(a.due_date).getTime()
         const dateB = new Date(b.due_date).getTime()
         return sortOrder === 'asc' ? dateA - dateB : dateB - dateA
-      } else {
+      } else if (sortBy === 'completion_date') {
+        // Handle null/undefined completion dates - put them at the end
+        if (!a.completion_date && !b.completion_date) return 0
+        if (!a.completion_date) return 1
+        if (!b.completion_date) return -1
+        
+        const dateA = new Date(a.completion_date).getTime()
+        const dateB = new Date(b.completion_date).getTime()
+        return sortOrder === 'asc' ? dateA - dateB : dateB - dateA
+      } else if (sortBy === 'status') {
         // Sort by status
         const indexA = getStatusIndex(a.status)
         const indexB = getStatusIndex(b.status)
         return sortOrder === 'asc' ? indexA - indexB : indexB - indexA
+      } else if (sortBy === 'category') {
+        // Sort by category name
+        const categoryA = a.categories?.name || ''
+        const categoryB = b.categories?.name || ''
+        
+        // Tasks without categories go at the end (or beginning for desc)
+        if (!categoryA && !categoryB) return 0
+        if (!categoryA) return sortOrder === 'asc' ? 1 : -1
+        if (!categoryB) return sortOrder === 'asc' ? -1 : 1
+        
+        const comparison = categoryA.localeCompare(categoryB)
+        return sortOrder === 'asc' ? comparison : -comparison
+      } else if (sortBy === 'title') {
+        // Sort by title alphabetically
+        const titleA = (a.title || '').toLowerCase()
+        const titleB = (b.title || '').toLowerCase()
+        
+        const comparison = titleA.localeCompare(titleB)
+        return sortOrder === 'asc' ? comparison : -comparison
       }
+      return 0
     })
     
     return sorted
@@ -2616,12 +2822,29 @@ function TasksView() {
   // Status filter handlers
   const toggleStatusFilter = (status: string) => {
     const newFilters = new Set(statusFilters)
-    if (newFilters.has(status)) {
-      newFilters.delete(status)
+    if (status === 'All') {
+      if (newFilters.has('All')) {
+        // If All is already selected, do nothing
+        return
+      } else {
+        // Select All and unselect everything else
+        setStatusFilters(new Set(['All']))
+      }
     } else {
-      newFilters.add(status)
+      // Remove All if it's selected
+      newFilters.delete('All')
+      if (newFilters.has(status)) {
+        newFilters.delete(status)
+      } else {
+        newFilters.add(status)
+      }
+      // If no status filters selected, select All
+      if (newFilters.size === 0) {
+        setStatusFilters(new Set(['All']))
+      } else {
+        setStatusFilters(newFilters)
+      }
     }
-    setStatusFilters(newFilters)
   }
 
   // Date filter handlers
@@ -2684,10 +2907,10 @@ function TasksView() {
     <div className="space-y-4">
       {/* Header */}
       {!selectedTask && (
-        <div className="bg-white rounded-xl shadow-lg p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
           <div className="flex justify-between items-center mb-3">
             <div>
-              <h2 className="text-2xl font-bold" style={{ color: '#11551a' }}>My Tasks</h2>
+              <h2 className="text-2xl font-bold dark:text-white" style={{ color: '#11551a' }}>My Tasks</h2>
               <div className="text-base text-gray-600 mt-1">
                 Today's Points: <span className="font-semibold" style={{ color: '#11551a' }}>{getTodayPoints()}</span>
               </div>
@@ -2701,10 +2924,7 @@ function TasksView() {
               </button>
               <button
                 onClick={handleAddTask}
-                className="text-white px-3 py-1.5 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                style={{ backgroundColor: '#f6d413' }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e5c312')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f6d413')}
+                className="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
               >
                 Add Task
               </button>
@@ -2735,7 +2955,7 @@ function TasksView() {
             <div className="mb-3 min-h-[100px]">
               {mobileFilterTab === 'Status' && (
                 <div className="flex flex-wrap gap-1.5">
-                  {['Ongoing', 'Concept', 'To do', 'In progress', 'Waiting', 'On hold', 'Complete', 'Dropped'].map(status => {
+                  {['All', 'Ongoing', 'Concept', 'To do', 'In progress', 'Waiting', 'On hold', 'Complete', 'Dropped'].map(status => {
                     const baseTasks = getBaseTasksForStatusCount(status)
                     const count = getStatusCount(status, baseTasks)
                     const isSelected = statusFilters.has(status)
@@ -2835,25 +3055,43 @@ function TasksView() {
                     <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Sort by:</label>
                     <select
                       value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as 'due_date' | 'status')}
-                      className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 cursor-pointer"
+                      onChange={(e) => setSortBy(e.target.value as 'due_date' | 'completion_date' | 'status' | 'category' | 'title')}
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 cursor-pointer bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       style={{ focusRingColor: '#11551a' } as any}
                     >
                       <option value="due_date">Due Date</option>
+                      <option value="completion_date">Completion Date</option>
                       <option value="status">Status</option>
+                      <option value="category">Category</option>
+                      <option value="title">Title</option>
                     </select>
                   </div>
                   <div className="flex gap-3 items-center">
-                    <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Order:</label>
-                    <select
-                      value={sortOrder}
-                      onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-                      className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 cursor-pointer"
-                      style={{ focusRingColor: '#11551a' } as any}
+                    <button
+                      onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-200 active:scale-[0.98] cursor-pointer flex items-center justify-center bg-white dark:bg-gray-700"
+                      title={sortOrder === 'asc' ? 'Ascending - Click to sort descending' : 'Descending - Click to sort ascending'}
                     >
-                      <option value="asc">Ascending</option>
-                      <option value="desc">Descending</option>
-                    </select>
+                      {sortOrder === 'asc' ? (
+                        <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  <div className="flex gap-3 items-center">
+                    <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Search:</label>
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Search tasks..."
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
                   </div>
                 </div>
               )}
@@ -2865,7 +3103,7 @@ function TasksView() {
             {/* Status Filter */}
             <div>
               <div className="flex flex-wrap gap-1.5">
-                {['Ongoing', 'Concept', 'To do', 'In progress', 'Waiting', 'On hold', 'Complete', 'Dropped'].map(status => {
+                {['All', 'Ongoing', 'Concept', 'To do', 'In progress', 'Waiting', 'On hold', 'Complete', 'Dropped'].map(status => {
                   const baseTasks = getBaseTasksForStatusCount(status)
                   const count = getStatusCount(status, baseTasks)
                   const isSelected = statusFilters.has(status)
@@ -3004,24 +3242,41 @@ function TasksView() {
           
           {/* Sort Controls */}
           <div className="hidden md:flex gap-3 items-center mt-3">
-            <label className="text-lg font-medium text-gray-700">Sort by:</label>
+            <label className="text-lg font-medium text-gray-700 dark:text-gray-300">Sort by:</label>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'due_date' | 'status')}
-              className="px-2 py-1 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 cursor-pointer"
+              onChange={(e) => setSortBy(e.target.value as 'due_date' | 'completion_date' | 'status' | 'category' | 'title')}
+              className="px-2 py-1 text-lg border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 cursor-pointer bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="due_date">Due Date</option>
+              <option value="completion_date">Completion Date</option>
               <option value="status">Status</option>
+              <option value="category">Category</option>
+              <option value="title">Title</option>
             </select>
-            <label className="text-lg font-medium text-gray-700">Order:</label>
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-              className="px-2 py-1 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 cursor-pointer"
+            <button
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-200 active:scale-[0.98] cursor-pointer flex items-center justify-center bg-white dark:bg-gray-700"
+              title={sortOrder === 'asc' ? 'Ascending - Click to sort descending' : 'Descending - Click to sort ascending'}
             >
-              <option value="asc">Ascending</option>
-              <option value="desc">Descending</option>
-            </select>
+              {sortOrder === 'asc' ? (
+                <svg className="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              )}
+            </button>
+            <label className="text-lg font-medium text-gray-700 ml-2">Search:</label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search tasks..."
+              className="px-3 py-1 text-lg border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
           </div>
         </div>
       )}
@@ -3036,7 +3291,7 @@ function TasksView() {
                 {columnTasks.map((task) => (
                   <div
                     key={task.id}
-                    className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-200 hover:scale-[1.02] p-3 cursor-pointer group"
+                    className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-all duration-200 hover:scale-[1.02] p-3 cursor-pointer group"
                     style={{ minHeight: '120px', maxHeight: '120px' }}
                   >
                     <div className="flex items-start gap-2 h-full">
@@ -3072,7 +3327,7 @@ function TasksView() {
                           <div className="flex-1">
                             <div className="flex items-center gap-1.5">
                               <h4 className={`font-semibold text-base transition-colors ${
-                                task.status === 'Complete' ? 'line-through text-gray-400' : 'text-gray-800 group-hover:text-green-700'
+                                  task.status === 'Complete' ? 'line-through text-gray-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-green-700 dark:group-hover:text-green-400'
                               }`}>
                                 {task.title}
                               </h4>
@@ -3138,7 +3393,7 @@ function TasksView() {
             {sortedTasks.map((task) => (
               <div
                 key={task.id}
-                className="bg-white rounded-xl shadow-md active:shadow-xl transition-all duration-200 active:scale-[0.98] p-3 group"
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-md active:shadow-xl transition-all duration-200 active:scale-[0.98] p-3 group"
                 style={{ minHeight: '120px' }}
               >
                 <div className="flex items-start gap-2 h-full">
@@ -3174,7 +3429,7 @@ function TasksView() {
                       <div className="flex-1">
                         <div className="flex items-center gap-1.5">
                           <h4 className={`font-semibold text-lg ${
-                            task.status === 'Complete' ? 'line-through text-gray-400' : 'text-gray-800'
+                            task.status === 'Complete' ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'
                           }`}>
                             {task.title}
                           </h4>
@@ -3464,9 +3719,9 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
   const isNewTask = task.id === null
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-5">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-3">
-        <h2 className="text-2xl font-bold" style={{ color: '#11551a' }}>{isNewTask ? 'New Task' : 'Task Details'}</h2>
+        <h2 className="text-2xl font-bold dark:text-white" style={{ color: '#11551a' }}>{isNewTask ? 'New Task' : 'Task Details'}</h2>
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={onShowCategories}
@@ -3515,7 +3770,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
             type="text"
             value={editedTask.title}
             onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           />
         </div>
 
@@ -3527,7 +3782,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
           <select
             value={editedTask.status}
             onChange={(e) => setEditedTask({ ...editedTask, status: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           >
             {statuses.map(status => (
               <option key={status} value={status}>{status}</option>
@@ -3543,7 +3798,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
           <select
             value={editedTask.category_id || ''}
             onChange={(e) => setEditedTask({ ...editedTask, category_id: e.target.value || null })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           >
             <option value="">No category</option>
             {categories.map((cat: any) => (
@@ -3561,7 +3816,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
             value={editedTask.description || ''}
             onChange={(e) => setEditedTask({ ...editedTask, description: e.target.value })}
             placeholder="Add notes about this task..."
-            className="w-full h-24 px-3 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 transition-all"
+            className="w-full h-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           />
         </div>
 
@@ -3578,7 +3833,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
               const value = e.target.value
               setEditedTask({ ...editedTask, points: value === '' ? null : (parseInt(value) || null) })
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           />
           <p className="text-lg text-gray-500 mt-1">
             Points awarded when this task is completed (default: 10)
@@ -3588,7 +3843,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
         {/* Subtasks */}
         <div>
           <div className="flex justify-between items-center mb-2">
-            <label className="block text-lg font-medium text-gray-700">
+            <label className="block text-lg font-medium text-gray-700 dark:text-gray-300">
               Subtasks
             </label>
             <button
@@ -3671,7 +3926,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
               <>
                 <div className="space-y-3 mb-3">
                   {subTasks.map((subTask, index) => (
-                    <div key={subTask.id || `new-${index}`} className="border border-gray-300 rounded-lg p-3 bg-gray-50">
+                    <div key={subTask.id || `new-${index}`} className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700">
                       {/* Title with checkbox */}
                       <div className="flex items-center gap-2 mb-3">
                         <div className="flex-1">
@@ -3694,7 +3949,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
                                   .eq('id', subTask.id)
                               }
                             }}
-                            className="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all text-base"
+                            className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           />
                         </div>
                         <div className="flex items-end pb-1">
@@ -3718,7 +3973,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
                               className="w-5 h-5 cursor-pointer"
                               style={{ accentColor: '#11551a' }}
                             />
-                            <span className="text-sm text-gray-700">Complete</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">Complete</span>
                           </label>
                         </div>
                       </div>
@@ -3756,7 +4011,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
                                 }
                               }
                             }}
-                            className="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer text-base"
+                            className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           />
                         </div>
                         
@@ -3779,7 +4034,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
                                   .eq('id', subTask.id)
                               }
                             }}
-                            className="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer text-base"
+                            className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           />
                         </div>
                         
@@ -3804,7 +4059,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
                                   .eq('id', subTask.id)
                               }
                             }}
-                            className="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all text-base"
+                            className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           />
                         </div>
                       </div>
@@ -3870,7 +4125,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
             )}
             
             {subTasks.length === 0 && (
-              <p className="text-gray-500 text-base">No subtasks yet. Click "Add Subtask" to create one.</p>
+              <p className="text-gray-500 dark:text-gray-400 text-base">No subtasks yet. Click "Add Subtask" to create one.</p>
             )}
           </div>
 
@@ -3884,7 +4139,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
               type="date"
               value={editedTask.due_date || ''}
               onChange={(e) => setEditedTask({ ...editedTask, due_date: e.target.value })}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -3948,7 +4203,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
             </label>
           </div>
           {editedTask.is_recurring && editedTask.recurring_frequency && (
-            <div className="mt-2 text-base text-gray-600">
+            <div className="mt-2 text-base text-gray-600 dark:text-gray-400">
               <span 
                 onClick={() => setShowRecurringModal(true)}
                 className="cursor-pointer hover:underline"
@@ -3958,7 +4213,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
             </div>
           )}
           {editedTask.is_repeating && editedTask.repeating_frequency && (
-            <div className="mt-2 text-base text-gray-600">
+            <div className="mt-2 text-base text-gray-600 dark:text-gray-400">
               <span 
                 onClick={() => setShowRepeatingModal(true)}
                 className="cursor-pointer hover:underline"
@@ -3978,7 +4233,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
             type="date"
             value={editedTask.completion_date || ''}
             onChange={(e) => setEditedTask({ ...editedTask, completion_date: e.target.value })}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           />
           <p className="text-lg text-gray-500 mt-1">
             Auto-filled when marked as Complete, but can be manually overridden
@@ -4014,7 +4269,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
       {/* Complete Confirmation Modal */}
       {showCompleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl p-5 max-w-md w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-5 max-w-md w-full">
             <div className="flex justify-between items-center mb-5">
               <h3 className="text-xl font-bold" style={{ color: '#11551a' }}>Confirm task is complete</h3>
               <button
@@ -4086,7 +4341,7 @@ function RecurringFrequencyModal({ currentFrequency, onClose, onSelect }: { curr
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl p-5 max-w-md w-full">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-5 max-w-md w-full">
         <div className="flex justify-between items-center mb-5">
           <h3 className="text-xl font-bold" style={{ color: '#11551a' }}>Recurring Frequency</h3>
           <button
@@ -4133,12 +4388,12 @@ function RecurringFrequencyModal({ currentFrequency, onClose, onSelect }: { curr
                 min="1"
                 value={customInterval}
                 onChange={(e) => setCustomInterval(e.target.value)}
-                className="w-16 px-2 py-1 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 transition-all"
+                className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-base focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
               <select
                 value={customUnit}
                 onChange={(e) => setCustomUnit(e.target.value)}
-                className="px-2 py-1 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 transition-all cursor-pointer"
+                className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-base focus:outline-none focus:ring-2 transition-all cursor-pointer bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="days">day(s)</option>
                 <option value="weeks">week(s)</option>
@@ -4331,9 +4586,9 @@ function CategoryManager({ categories: initialCategories, onClose }: any) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl p-5 max-w-2xl w-full max-h-[85vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-5 max-w-2xl w-full max-h-[85vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-5">
-          <h2 className="text-2xl font-bold" style={{ color: '#11551a' }}>Categories</h2>
+          <h2 className="text-2xl font-bold dark:text-white" style={{ color: '#11551a' }}>Categories</h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 text-3xl font-light cursor-pointer transition-colors"
@@ -4352,13 +4607,13 @@ function CategoryManager({ categories: initialCategories, onClose }: any) {
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && addCategory()}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all"
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
             <input
               type="color"
               value={newCategoryColor}
               onChange={(e) => setNewCategoryColor(e.target.value)}
-              className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
+              className="w-12 h-10 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer"
               title="Pick category color"
             />
             <button
@@ -4403,7 +4658,7 @@ function CategoryManager({ categories: initialCategories, onClose }: any) {
                       type="text"
                       value={cat.name}
                       onChange={(e) => updateCategory(cat.id, { name: e.target.value })}
-                      className="flex-1 px-2 py-1 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all"
+                      className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       onClick={(e) => e.stopPropagation()}
                     />
                   </div>
@@ -4774,9 +5029,9 @@ function JournalView() {
   const organizedHabits = getOrganizedHabits()
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-5">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-        <h2 className="text-2xl font-bold" style={{ color: '#11551a' }}>Daily Journal</h2>
+        <h2 className="text-2xl font-bold dark:text-white" style={{ color: '#11551a' }}>Daily Journal</h2>
         <div className="flex gap-2">
           <button
             onClick={() => setShowHabitManager(true)}
@@ -4814,7 +5069,7 @@ function JournalView() {
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
             max={new Date().toISOString().split('T')[0]} // Can't select future dates
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           />
           <button
             onClick={() => navigateDate('next')}
@@ -4836,13 +5091,13 @@ function JournalView() {
       </div>
 
       {loading ? (
-        <p className="text-gray-500 text-lg">Loading...</p>
+        <p className="text-gray-500 dark:text-gray-400 text-lg">Loading...</p>
       ) : (
         <>
           {/* Display Mode */}
           {!isEditing && content ? (
             <div>
-              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 min-h-[300px] whitespace-pre-wrap text-lg">
+              <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg border border-gray-200 dark:border-gray-600 min-h-[300px] whitespace-pre-wrap text-lg text-gray-900 dark:text-white">
                 {content}
               </div>
               <div className="flex gap-2 mt-3">
@@ -4864,7 +5119,7 @@ function JournalView() {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Write about your day..."
-                className="w-full h-72 p-3 border border-gray-300 rounded-lg resize-none text-lg focus:outline-none focus:ring-2 transition-all"
+                className="w-full h-72 p-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-none text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
               <div className="flex justify-between items-center mt-3">
                 <div className="flex gap-2">
@@ -4923,7 +5178,7 @@ function JournalView() {
                       const { group, habits: groupHabits } = item.data
                       const groupCompleted = groupHabits.some((h: any) => habitCompletions.get(h.id))
                       return (
-                        <div key={`group-${group.id}`} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                        <div key={`group-${group.id}`} className="border border-gray-200 dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700">
                           <div className="flex items-center gap-2 mb-2">
                             <input
                               type="checkbox"
@@ -4983,7 +5238,7 @@ function JournalView() {
                     } else {
                       const habit = item.data
                       return (
-                        <div key={habit.id} className="flex items-center gap-2 border border-gray-200 rounded-lg p-2.5 bg-white">
+                        <div key={habit.id} className="flex items-center gap-2 border border-gray-200 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700">
                           <div className="flex items-center gap-1">
                             <input
                               type="checkbox"
@@ -5020,7 +5275,7 @@ function JournalView() {
                   {calibrations.map(calibration => {
                     const currentScore = calibrationScores.get(calibration.id) || 0
                     return (
-                      <div key={calibration.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between border border-gray-200 rounded-lg p-2.5 bg-white gap-2">
+                      <div key={calibration.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between border border-gray-200 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 gap-2">
                         <span className="font-medium text-lg">
                           {calibration.name}
                         </span>
@@ -5189,9 +5444,9 @@ function CalibrationManager({ calibrations: initialCalibrations, onClose }: any)
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl p-5 max-w-2xl w-full max-h-[85vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-5 max-w-2xl w-full max-h-[85vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-5">
-          <h2 className="text-2xl font-bold" style={{ color: '#11551a' }}>Calibration</h2>
+          <h2 className="text-2xl font-bold dark:text-white" style={{ color: '#11551a' }}>Calibration</h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 text-3xl font-light cursor-pointer transition-colors"
@@ -5209,7 +5464,7 @@ function CalibrationManager({ calibrations: initialCalibrations, onClose }: any)
               value={newCalibrationName}
               onChange={(e) => setNewCalibrationName(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && addCalibration()}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all"
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
             <button
               onClick={addCalibration}
@@ -5244,7 +5499,7 @@ function CalibrationManager({ calibrations: initialCalibrations, onClose }: any)
                       type="text"
                       value={cal.name}
                       onChange={(e) => updateCalibration(cal.id, { name: e.target.value })}
-                      className="flex-1 px-2 py-1 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all"
+                      className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       onClick={(e) => e.stopPropagation()}
                     />
                   </div>
@@ -5547,7 +5802,7 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl p-5 max-w-2xl w-full max-h-[85vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-5 max-w-2xl w-full max-h-[85vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-5">
           <h2 className="text-2xl font-bold" style={{ color: '#11551a' }}>Habits</h2>
           <button
@@ -5567,7 +5822,7 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
               value={newHabitGroupName}
               onChange={(e) => setNewHabitGroupName(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && addHabitGroup()}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all"
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
             <button
               onClick={addHabitGroup}
@@ -5590,7 +5845,7 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
               value={newHabitName}
               onChange={(e) => setNewHabitName(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && addHabit()}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all"
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
             <select
               value={selectedGroup}
@@ -5630,7 +5885,7 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
                       onDragStart={() => handleDragStart(index, 'group')}
                       onDragOver={(e) => handleDragOver(e, index)}
                       onDragEnd={handleDragEnd}
-                      className="border border-gray-200 rounded-lg p-2.5 hover:bg-gray-50 cursor-move transition-colors"
+                      className="border border-gray-200 dark:border-gray-600 rounded-lg p-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-move transition-colors"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2.5 flex-1">
@@ -5719,7 +5974,7 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
                                 type="text"
                                 value={habit.name}
                                 onChange={(e) => updateHabit(habit.id, { name: e.target.value })}
-                                className="flex-1 px-2 py-1 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all"
+                                className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                 onClick={(e) => e.stopPropagation()}
                               />
                             </div>
@@ -5757,7 +6012,7 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
                           type="text"
                           value={habit.name}
                           onChange={(e) => updateHabit(habit.id, { name: e.target.value })}
-                          className="flex-1 px-2 py-1 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all"
+                          className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           onClick={(e) => e.stopPropagation()}
                         />
                       </div>
