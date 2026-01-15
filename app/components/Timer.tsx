@@ -19,7 +19,7 @@ export default function Timer() {
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const popupRef = useRef<HTMLDivElement>(null)
-  const intervalRef = useRef<number | null>(null)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const anyRunning = timers.some(t => t.isRunning)
 
   // Timer tick effect
