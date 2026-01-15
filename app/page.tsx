@@ -5,6 +5,21 @@ import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 import Image from 'next/image'
 
+type ActiveDated = {
+  active_from?: string | null
+  active_to?: string | null
+}
+
+function isActiveOnDate(dateStr: string, item?: ActiveDated | null) {
+  const from = item?.active_from ?? '0000-01-01'
+  const to = item?.active_to ?? '9999-12-31'
+  return dateStr >= from && dateStr <= to
+}
+
+function toDateOrNull(value: string) {
+  return value && value.trim() ? value : null
+}
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null)
   const [email, setEmail] = useState('')
@@ -13,7 +28,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [authView, setAuthView] = useState<'signin' | 'signup' | 'forgot' | 'reset'>('signin')
-  const [view, setView] = useState<'dashboard' | 'tasks' | 'journal' | 'today' | 'settings'>('dashboard')
+  const [view, setView] = useState<'dashboard' | 'tasks' | 'daily' | 'today' | 'settings'>('dashboard')
   const [showChangePassword, setShowChangePassword] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [darkMode, setDarkMode] = useState(false)
@@ -167,179 +182,181 @@ export default function Home() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F8] dark:bg-gray-900">
-        <div className="max-w-md w-full p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
-          <h2 className="text-3xl font-bold text-center mb-6 dark:text-white" style={{ color: '#11551a' }}>Welcome</h2>
-          
-          {error && (
-            <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-3 py-2 rounded-lg mb-4 text-lg">
-              {error}
-            </div>
-          )}
-          
-          {success && (
-            <div className="bg-[#e8f5e9] dark:bg-green-900/30 text-green-800 dark:text-green-400 px-3 py-2 rounded-lg mb-4 text-lg">
-              {success}
-            </div>
-          )}
+      <>
+        <div className="min-h-screen flex items-center justify-center bg-[#F7F7F8] dark:bg-gray-900">
+          <div className="max-w-md w-full p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+            <h2 className="text-3xl font-bold text-center mb-6 dark:text-white" style={{ color: '#11551a' }}>Welcome</h2>
+            
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-3 py-2 rounded-lg mb-4 text-lg">
+                {error}
+              </div>
+            )}
+            
+            {success && (
+              <div className="bg-[#e8f5e9] dark:bg-green-900/30 text-green-800 dark:text-green-400 px-3 py-2 rounded-lg mb-4 text-lg">
+                {success}
+              </div>
+            )}
 
-          {authView === 'signin' && (
-            <div className="space-y-3">
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSignIn()}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSignIn()}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={handleSignIn}
-                  disabled={loading}
-                  className="flex-1 text-white py-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                  style={{ backgroundColor: '#11551a' }}
-                  onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#1a7a28')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
-                >
-                  {loading ? 'Signing in...' : 'Sign In'}
-                </button>
+            {authView === 'signin' && (
+              <div className="space-y-3">
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSignIn()}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSignIn()}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSignIn}
+                    disabled={loading}
+                    className="flex-1 text-white py-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    style={{ backgroundColor: '#11551a' }}
+                    onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#1a7a28')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
+                  >
+                    {loading ? 'Signing in...' : 'Sign In'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAuthView('signup')
+                      setError(null)
+                      setSuccess(null)
+                    }}
+                    disabled={loading}
+                    className="flex-1 text-white py-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    style={{ backgroundColor: '#f6d413' }}
+                    onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#e5c312')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f6d413')}
+                  >
+                    Sign Up
+                  </button>
+                </div>
                 <button
                   onClick={() => {
-                    setAuthView('signup')
+                    setAuthView('forgot')
                     setError(null)
                     setSuccess(null)
                   }}
-                  disabled={loading}
-                  className="flex-1 text-white py-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                  style={{ backgroundColor: '#f6d413' }}
-                  onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#e5c312')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f6d413')}
+                  className="w-full text-lg underline cursor-pointer transition-colors"
+                  style={{ color: '#11551a' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#1a7a28')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = '#11551a')}
                 >
-                  Sign Up
+                  Forgot password?
                 </button>
               </div>
-              <button
-                onClick={() => {
-                  setAuthView('forgot')
+            )}
+
+            {authView === 'signup' && (
+              <div className="space-y-3">
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSignUp()}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                />
+                <input
+                  type="password"
+                  placeholder="Password (min. 6 characters)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSignUp()}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSignUp}
+                    disabled={loading}
+                    className="flex-1 text-white py-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    style={{ backgroundColor: '#f6d413' }}
+                    onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#e5c312')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f6d413')}
+                  >
+                    {loading ? 'Signing up...' : 'Sign Up'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAuthView('signin')
+                      setError(null)
+                      setSuccess(null)
+                    }}
+                    className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {authView === 'forgot' && (
+              <div className="space-y-3">
+                <p className="text-gray-600 dark:text-gray-300 text-center text-lg">
+                  Enter your email address and we'll send you a link to reset your password.
+                </p>
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleForgotPassword()}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleForgotPassword}
+                    disabled={loading}
+                    className="flex-1 text-white py-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    style={{ backgroundColor: '#11551a' }}
+                    onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#1a7a28')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
+                  >
+                    {loading ? 'Sending...' : 'Send Reset Link'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAuthView('signin')
+                      setError(null)
+                      setSuccess(null)
+                      setEmail('')
+                    }}
+                    className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {authView === 'reset' && (
+              <ResetPasswordForm
+                onReset={handleResetPassword}
+                onCancel={() => {
+                  setAuthView('signin')
                   setError(null)
                   setSuccess(null)
                 }}
-                className="w-full text-lg underline cursor-pointer transition-colors"
-                style={{ color: '#11551a' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#1a7a28')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#11551a')}
-              >
-                Forgot password?
-              </button>
-            </div>
-          )}
-
-          {authView === 'signup' && (
-            <div className="space-y-3">
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSignUp()}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                error={error}
+                success={success}
+                loading={loading}
               />
-              <input
-                type="password"
-                placeholder="Password (min. 6 characters)"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSignUp()}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={handleSignUp}
-                  disabled={loading}
-                  className="flex-1 text-white py-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                  style={{ backgroundColor: '#f6d413' }}
-                  onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#e5c312')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f6d413')}
-                >
-                  {loading ? 'Signing up...' : 'Sign Up'}
-                </button>
-                <button
-                  onClick={() => {
-                    setAuthView('signin')
-                    setError(null)
-                    setSuccess(null)
-                  }}
-                  className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
-                >
-                  Back to Sign In
-                </button>
-              </div>
-            </div>
-          )}
-
-          {authView === 'forgot' && (
-            <div className="space-y-3">
-              <p className="text-gray-600 dark:text-gray-300 text-center text-lg">
-                Enter your email address and we'll send you a link to reset your password.
-              </p>
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleForgotPassword()}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={handleForgotPassword}
-                  disabled={loading}
-                  className="flex-1 text-white py-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                  style={{ backgroundColor: '#11551a' }}
-                  onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#1a7a28')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
-                >
-                  {loading ? 'Sending...' : 'Send Reset Link'}
-                </button>
-                <button
-                  onClick={() => {
-                    setAuthView('signin')
-                    setError(null)
-                    setSuccess(null)
-                    setEmail('')
-                  }}
-                  className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
-                >
-                  Back to Sign In
-                </button>
-              </div>
-            </div>
-          )}
-
-          {authView === 'reset' && (
-            <ResetPasswordForm
-              onReset={handleResetPassword}
-              onCancel={() => {
-                setAuthView('signin')
-                setError(null)
-                setSuccess(null)
-              }}
-              error={error}
-              success={success}
-              loading={loading}
-            />
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
@@ -388,14 +405,14 @@ export default function Home() {
                 Tasks
               </button>
               <button
-                onClick={() => setView('journal')}
+                onClick={() => setView('daily')}
                 className={`px-5 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-                  view === 'journal'
+                  view === 'daily'
                     ? 'text-white shadow-md bg-[#11551a]'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                 }`}
               >
-                Journal
+                Daily
               </button>
               <button
                 onClick={() => setView('today')}
@@ -504,15 +521,15 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => {
-                    setView('journal')
+                    setView('daily')
                     setMobileMenuOpen(false)
                   }}
                   className={`w-full px-4 py-2.5 rounded-lg text-base font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
-                    view === 'journal' ? 'text-white shadow-md' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    view === 'daily' ? 'text-white shadow-md' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                   }`}
-                  style={view === 'journal' ? { backgroundColor: '#11551a' } : {}}
+                  style={view === 'daily' ? { backgroundColor: '#11551a' } : {}}
                 >
-                  Journal
+                  Daily
                 </button>
                 <button
                   onClick={() => {
@@ -555,7 +572,7 @@ export default function Home() {
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {view === 'dashboard' ? <DashboardView /> : view === 'tasks' ? <TasksView /> : view === 'journal' ? <JournalView /> : view === 'today' ? <TodayView /> : <SettingsView user={user} darkMode={darkMode} setDarkMode={setDarkMode} />}
+        {view === 'dashboard' ? <DashboardView /> : view === 'tasks' ? <TasksView /> : view === 'daily' ? <DailyView /> : view === 'today' ? <TodayView /> : <SettingsView user={user} darkMode={darkMode} setDarkMode={setDarkMode} />}
       </div>
     </div>
   )
@@ -667,11 +684,22 @@ function DashboardView() {
     if (data) setCategories(data)
   }
 
-  // Calculate total habit items (groups + ungrouped habits)
-  const getTotalHabitItems = () => {
-    const habitsInGroups = new Set(habits.filter(h => h.group_id).map(h => h.group_id))
-    const ungroupedHabitsCount = habits.filter(h => !h.group_id).length
-    return habitsInGroups.size + ungroupedHabitsCount
+  const getTotalHabitItemsForDate = (dateStr: string) => {
+    const groupsById = new Map<string, any>(habitGroups.map(g => [g.id, g]))
+    const isGroupActive = (groupId: string) => {
+      const group = groupsById.get(groupId)
+      return !!group && isActiveOnDate(dateStr, group)
+    }
+
+    const activeHabits = habits.filter(h => {
+      if (!isActiveOnDate(dateStr, h)) return false
+      if (h.group_id) return isGroupActive(h.group_id)
+      return true
+    })
+
+    const activeGroupIds = new Set(activeHabits.filter(h => h.group_id).map(h => h.group_id))
+    const activeUngroupedCount = activeHabits.filter(h => !h.group_id).length
+    return activeGroupIds.size + activeUngroupedCount
   }
 
   // Calculate habit completions for a specific date (groups + ungrouped habits)
@@ -682,11 +710,19 @@ function DashboardView() {
       .select('habit_id, completed')
       .eq('date', dateStr)
     
+    const groupsById = new Map<string, any>(habitGroups.map(g => [g.id, g]))
+    const isGroupActive = (groupId: string) => {
+      const group = groupsById.get(groupId)
+      return !!group && isActiveOnDate(dateStr, group)
+    }
+
     // Group habits by group_id
     const habitsByGroup = new Map<string, string[]>()
     const ungroupedHabits: string[] = []
     
     habits.forEach(habit => {
+      if (!isActiveOnDate(dateStr, habit)) return
+      if (habit.group_id && !isGroupActive(habit.group_id)) return
       if (habit.group_id) {
         if (!habitsByGroup.has(habit.group_id)) {
           habitsByGroup.set(habit.group_id, [])
@@ -747,6 +783,8 @@ function DashboardView() {
       
       // Add points from completed subtasks
       tasks.forEach(task => {
+        // Dropped tasks should not contribute points to scores
+        if (task.status === 'Dropped') return
         if (task.sub_tasks && task.sub_tasks.length > 0) {
           task.sub_tasks
             .filter((st: any) => st.completion_date === dateStr)
@@ -761,14 +799,21 @@ function DashboardView() {
       const habitCount = habitCompletions.completed
       const totalHabits = habitCompletions.total
       
-      // Calculate average calibration score
+      // Calculate average calibration score (only calibrations active on this date)
       const { data: calibrationScores } = await supabase
         .from('calibration_scores')
         .select('*')
         .eq('date', dateStr)
       
-      const avgCalibration = calibrationScores && calibrationScores.length > 0
-        ? calibrationScores.reduce((sum, cs) => sum + cs.score, 0) / calibrationScores.length
+      const activeCalibrationIds = new Set(
+        calibrations
+          .filter(c => isActiveOnDate(dateStr, c))
+          .map(c => c.id)
+      )
+
+      const relevantScores = (calibrationScores || []).filter((cs: any) => activeCalibrationIds.has(cs.calibration_id))
+      const avgCalibration = relevantScores.length > 0
+        ? relevantScores.reduce((sum: number, cs: any) => sum + cs.score, 0) / relevantScores.length
         : 0
       
       // Format date as "Fri 19 Dec", "Tue 6 Jan" etc.
@@ -812,8 +857,12 @@ function DashboardView() {
   // Task summary calculations
   const totalTasks = tasks.length
   const completedTasks = tasks.filter(t => t.status === 'Complete').length
-  const totalPoints = tasks.reduce((sum, t) => sum + (t.points ?? 10), 0)
+  const totalPoints = tasks
+    .filter(t => t.status !== 'Dropped')
+    .reduce((sum, t) => sum + (t.points ?? 10), 0)
   const completedPoints = tasks.reduce((sum, task) => {
+    // Dropped tasks should not contribute points to scores
+    if (task.status === 'Dropped') return sum
     if (task.sub_tasks && task.sub_tasks.length > 0) {
       return sum + task.sub_tasks
         .filter((st: any) => st.completion_date !== null)
@@ -891,10 +940,11 @@ function DashboardView() {
     return sum / dailyData.length
   }
 
-  const totalHabitItems = getTotalHabitItems()
+  const todayStr = new Date().toISOString().split('T')[0]
+  const totalHabitItems = getTotalHabitItemsForDate(todayStr)
   const maxPoints = dailyData.length > 0 ? Math.max(...dailyData.map(d => d.taskPoints), 10) : 10
   const maxHabits = dailyData.length > 0 ? Math.max(...dailyData.map(d => d.totalHabits), 1) : 1
-  const totalCalibrations = calibrations.length
+  const totalCalibrations = calibrations.filter(c => isActiveOnDate(todayStr, c)).length
 
   return (
     <div className="space-y-6">
@@ -1261,7 +1311,6 @@ function TodayView() {
       .from('today_items')
       .select('*')
       .eq('user_id', user?.id)
-      .eq('date', today)
       .order('sort_order', { ascending: true })
     
     if (data) setTodayItems(data)
@@ -1370,13 +1419,13 @@ function TodayView() {
   const toggleTaskComplete = async (task: any, e: React.MouseEvent) => {
     e.stopPropagation()
     
-    const isComplete = task.status === 'Complete'
+    const isDone = task.status === 'Complete' || task.status === 'Dropped'
     
     await supabase
       .from('tasks')
       .update({
-        status: isComplete ? 'To do' : 'Complete',
-        completion_date: isComplete ? null : today
+        status: isDone ? 'To do' : 'Complete',
+        completion_date: isDone ? null : today
       })
       .eq('id', task.id)
     
@@ -1406,7 +1455,7 @@ function TodayView() {
         onConflict: 'habit_id,date,user_id'
       })
     
-    // Reload habits to sync with Journal page
+    // Reload habits to sync with Daily page
     loadHabits()
   }
 
@@ -1425,7 +1474,7 @@ function TodayView() {
         .filter((st: any) => st.completion_date !== null)
         .reduce((sum: number, st: any) => sum + (st.points ?? 0), 0)
     } else {
-      return task.status === 'Complete' ? (task.points ?? 10) : 0
+      return (task.status === 'Complete' || task.status === 'Dropped') ? (task.points ?? 10) : 0
     }
   }
 
@@ -1457,87 +1506,56 @@ function TodayView() {
   const clearCompleted = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     
-    // Clear completed tasks
+    // Remove completed items from workflow (delete today_items entries)
+    // without changing their completion status
     for (const item of todayItems) {
       if (item.item_type === 'task') {
         const task = tasks.find(t => t.id === item.item_id)
-        if (task && task.status === 'Complete') {
+        if (task && (task.status === 'Complete' || task.status === 'Dropped')) {
+          // Only remove from workflow, keep task as complete
           await supabase
-            .from('tasks')
-            .update({
-              status: 'To do',
-              completion_date: null
-            })
-            .eq('id', task.id)
+            .from('today_items')
+            .delete()
+            .eq('id', item.id)
         }
       } else if (item.item_type === 'habit') {
         const habit = habits.find(h => h.id === item.item_id)
         if (habit) {
-          // Check if habit is completed for today
+          // Check if habit is completed for the date associated with this workflow item
           const { data: completion } = await supabase
             .from('habit_completions')
             .select('completed')
             .eq('habit_id', habit.id)
-            .eq('date', today)
+            .eq('date', item.date)
             .eq('user_id', user?.id)
             .maybeSingle()
           
           if (completion?.completed) {
+            // Only remove from workflow, keep habit as complete
             await supabase
-              .from('habit_completions')
-              .upsert({
-                habit_id: habit.id,
-                date: today,
-                user_id: user?.id,
-                completed: false
-              }, {
-                onConflict: 'habit_id,date,user_id'
-              })
+              .from('today_items')
+              .delete()
+              .eq('id', item.id)
           }
         }
       }
     }
     
-    loadTasks()
-    loadHabits()
     loadTodayItems()
   }
 
   const clearAll = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     
-    // Clear all tasks
+    // Remove all items from workflow (delete all today_items entries)
+    // without changing their completion status
     for (const item of todayItems) {
-      if (item.item_type === 'task') {
-        const task = tasks.find(t => t.id === item.item_id)
-        if (task) {
-          await supabase
-            .from('tasks')
-            .update({
-              status: 'To do',
-              completion_date: null
-            })
-            .eq('id', task.id)
-        }
-      } else if (item.item_type === 'habit') {
-        const habit = habits.find(h => h.id === item.item_id)
-        if (habit) {
-          await supabase
-            .from('habit_completions')
-            .upsert({
-              habit_id: habit.id,
-              date: today,
-              user_id: user?.id,
-              completed: false
-            }, {
-              onConflict: 'habit_id,date,user_id'
-            })
-        }
-      }
+      await supabase
+        .from('today_items')
+        .delete()
+        .eq('id', item.id)
     }
     
-    loadTasks()
-    loadHabits()
     loadTodayItems()
   }
 
@@ -1577,11 +1595,14 @@ function TodayView() {
               }
             }
             
-            if (filteredUpdates.status === 'Complete' && !filteredUpdates.completion_date) {
-              filteredUpdates.completion_date = new Date().toISOString().split('T')[0]
-            }
-            if (filteredUpdates.status !== 'Complete') {
-              filteredUpdates.completion_date = null
+            // Only adjust completion_date when status is being updated
+            if ('status' in filteredUpdates) {
+              if ((filteredUpdates.status === 'Complete' || filteredUpdates.status === 'Dropped') && !filteredUpdates.completion_date) {
+                filteredUpdates.completion_date = new Date().toISOString().split('T')[0]
+              }
+              if (filteredUpdates.status !== 'Complete' && filteredUpdates.status !== 'Dropped') {
+                filteredUpdates.completion_date = null
+              }
             }
             
             const result = await supabase
@@ -1609,14 +1630,14 @@ function TodayView() {
       ) : sortedItems.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-500 dark:text-gray-400 text-lg">No items selected for today</p>
-          <p className="text-gray-400 text-base mt-2">Add tasks from the Tasks page or habits from the Journal page</p>
+          <p className="text-gray-400 text-base mt-2">Add tasks from the Tasks page or habits from the Daily page</p>
         </div>
       ) : (
         <div className="space-y-3">
           {sortedItems.map((item, index) => {
             if (item.type === 'task' && item.data) {
               const task = item.data
-              const isComplete = task.status === 'Complete'
+              const isDone = task.status === 'Complete' || task.status === 'Dropped'
               
               return (
                 <div
@@ -1652,7 +1673,7 @@ function TodayView() {
                     <div className="flex flex-col gap-1 flex-shrink-0">
                       <input
                         type="checkbox"
-                        checked={isComplete}
+                        checked={isDone}
                         onChange={(e) => {
                           e.stopPropagation()
                           toggleTaskComplete(task, e as any)
@@ -1690,7 +1711,7 @@ function TodayView() {
                         <div className="flex-1">
                           <div className="flex items-center gap-1.5">
                             <h4 className={`font-semibold text-base transition-colors ${
-                              isComplete ? 'line-through text-gray-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-green-700 dark:group-hover:text-green-400'
+                              isDone ? 'line-through text-gray-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-green-700 dark:group-hover:text-green-400'
                             }`}>
                               {task.title}
                             </h4>
@@ -1871,7 +1892,7 @@ function HabitCard({ habit, today, onToggleComplete, onRemove, itemId, onDragSta
           <span className="text-sm text-gray-500 mt-1">Habit</span>
         </div>
       </div>
-    </div>
+      </div>
   )
 }
 
@@ -2254,14 +2275,17 @@ function TasksView() {
       }
     }
     
-    // Auto-set completion date when status changes to Complete
-    if (filteredUpdates.status === 'Complete' && !filteredUpdates.completion_date) {
-      filteredUpdates.completion_date = new Date().toISOString().split('T')[0]
-    }
-    
-    // Clear completion date if status is not Complete
-    if (filteredUpdates.status !== 'Complete') {
-      filteredUpdates.completion_date = null
+    // Only adjust completion_date when status is being updated
+    if ('status' in filteredUpdates) {
+      // Auto-set completion date when status changes to Complete or Dropped
+      if ((filteredUpdates.status === 'Complete' || filteredUpdates.status === 'Dropped') && !filteredUpdates.completion_date) {
+        filteredUpdates.completion_date = new Date().toISOString().split('T')[0]
+      }
+      
+      // Clear completion date if status is not Complete/Dropped
+      if (filteredUpdates.status !== 'Complete' && filteredUpdates.status !== 'Dropped') {
+        filteredUpdates.completion_date = null
+      }
     }
   
     let error
@@ -2305,10 +2329,10 @@ function TasksView() {
   const toggleComplete = async (task: any, e: React.MouseEvent) => {
     e.stopPropagation() // Prevent opening detail view
     
-    const isComplete = task.status === 'Complete'
+    const isDone = task.status === 'Complete' || task.status === 'Dropped'
     
     // If completing a recurring task, create a duplicate with next due date
-    if (!isComplete && (task.is_recurring === true || task.is_recurring === 'true') && task.recurring_frequency && task.due_date) {
+    if (!isDone && (task.is_recurring === true || task.is_recurring === 'true') && task.recurring_frequency && task.due_date) {
       const nextDueDate = calculateNextDueDate(task.due_date, task.recurring_frequency)
       
       // Create duplicate task
@@ -2334,7 +2358,7 @@ function TasksView() {
     // If completing a repeating task, create a duplicate with next due date after completion
     // Check for both boolean true and string 'true' to handle database type variations
     const isRepeating = task.is_repeating === true || task.is_repeating === 'true' || task.is_repeating === 1
-    if (!isComplete && isRepeating && task.repeating_frequency) {
+    if (!isDone && isRepeating && task.repeating_frequency) {
       console.log('Creating repeating task. Task data:', { 
         is_repeating: task.is_repeating, 
         repeating_frequency: task.repeating_frequency,
@@ -2373,8 +2397,8 @@ function TasksView() {
     }
     
     await updateTask(task.id, {
-      status: isComplete ? 'To do' : 'Complete',
-      completion_date: isComplete ? null : new Date().toISOString().split('T')[0]
+      status: isDone ? 'To do' : 'Complete',
+      completion_date: isDone ? null : new Date().toISOString().split('T')[0]
     })
   }
 
@@ -2445,6 +2469,8 @@ function TasksView() {
     
     // Add points from completed subtasks
     tasks.forEach(task => {
+      // Dropped tasks should not contribute points to scores
+      if (task.status === 'Dropped') return
       if (task.sub_tasks && task.sub_tasks.length > 0) {
         task.sub_tasks
           .filter((st: any) => st.completion_date === todayStr)
@@ -2965,7 +2991,7 @@ function TasksView() {
                         onClick={() => toggleStatusFilter(status)}
                         className={`px-2.5 py-1 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
                           isSelected
-                            ? 'text-white shadow-md border-2 border-gray-900'
+                            ? 'text-white shadow-md border-2 border-black dark:border-white shadow-[inset_0_0_0_2px_white] dark:shadow-[inset_0_0_0_2px_black]'
                             : 'bg-gray-200 text-gray-700 border-2 border-transparent'
                         }`}
                         style={isSelected ? { backgroundColor: '#11551a' } : {}}
@@ -2989,7 +3015,7 @@ function TasksView() {
                         onClick={() => toggleDateFilter(dateOption)}
                         className={`px-2.5 py-1 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
                           isSelected
-                            ? 'text-white shadow-md border-2 border-gray-900'
+                            ? 'text-white shadow-md border-2 border-black dark:border-white shadow-[inset_0_0_0_2px_white] dark:shadow-[inset_0_0_0_2px_black]'
                             : 'bg-gray-200 text-gray-700 border-2 border-transparent'
                         }`}
                         style={isSelected ? { backgroundColor: '#11551a' } : {}}
@@ -3007,7 +3033,7 @@ function TasksView() {
                     onClick={() => toggleCategoryFilter('All')}
                     className={`px-2.5 py-1 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
                       categoryFilters.has('All')
-                        ? 'text-white shadow-md border-2 border-gray-900'
+                        ? 'text-white shadow-md border-2 border-black dark:border-white shadow-[inset_0_0_0_2px_white] dark:shadow-[inset_0_0_0_2px_black]'
                         : 'bg-gray-200 text-gray-700 border-2 border-transparent'
                     }`}
                     style={categoryFilters.has('All') ? { backgroundColor: '#11551a' } : {}}
@@ -3024,7 +3050,7 @@ function TasksView() {
                         onClick={() => toggleCategoryFilter(category.id)}
                         className={`px-2.5 py-1 rounded-lg text-sm font-medium text-white transition-all duration-200 active:scale-[0.98] cursor-pointer ${
                           isSelected
-                            ? 'border-2 border-gray-900'
+                            ? 'border-2 border-black dark:border-white shadow-[inset_0_0_0_2px_white] dark:shadow-[inset_0_0_0_2px_black]'
                             : 'border-2 border-transparent'
                         }`}
                         style={{ 
@@ -3039,7 +3065,7 @@ function TasksView() {
                     onClick={() => toggleCategoryFilter('None')}
                     className={`px-2.5 py-1 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
                       categoryFilters.has('None')
-                        ? 'text-white shadow-md border-2 border-gray-900'
+                        ? 'text-white shadow-md border-2 border-black dark:border-white shadow-[inset_0_0_0_2px_white] dark:shadow-[inset_0_0_0_2px_black]'
                         : 'bg-gray-200 text-gray-700 border-2 border-transparent'
                     }`}
                     style={categoryFilters.has('None') ? { backgroundColor: '#6b7280' } : {}}
@@ -3113,7 +3139,7 @@ function TasksView() {
                       onClick={() => toggleStatusFilter(status)}
                       className={`px-2.5 py-1 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] cursor-pointer ${
                         isSelected
-                          ? 'text-white shadow-md border-2 border-gray-900'
+                          ? 'text-white shadow-md border-2 border-gray-900 dark:border-gray-300'
                           : 'bg-gray-200 text-gray-700 border-2 border-transparent'
                       }`}
                       style={isSelected ? { backgroundColor: '#11551a' } : {}}
@@ -3148,7 +3174,7 @@ function TasksView() {
                       onClick={() => toggleDateFilter(dateOption)}
                       className={`px-2.5 py-1 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] cursor-pointer ${
                         isSelected
-                          ? 'text-white shadow-md border-2 border-gray-900'
+                          ? 'text-white shadow-md border-2 border-gray-900 dark:border-gray-300'
                           : 'bg-gray-200 text-gray-700 border-2 border-transparent'
                       }`}
                       style={isSelected ? { backgroundColor: '#11551a' } : {}}
@@ -3177,7 +3203,7 @@ function TasksView() {
                   onClick={() => toggleCategoryFilter('All')}
                   className={`px-2.5 py-1 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] cursor-pointer ${
                     categoryFilters.has('All')
-                      ? 'text-white shadow-md border-2 border-gray-900'
+                      ? 'text-white shadow-md border-2 border-black dark:border-white shadow-[inset_0_0_0_2px_white] dark:shadow-[inset_0_0_0_2px_black]'
                       : 'bg-gray-200 text-gray-700 border-2 border-transparent'
                   }`}
                   style={categoryFilters.has('All') ? { backgroundColor: '#11551a' } : {}}
@@ -3204,7 +3230,7 @@ function TasksView() {
                       onClick={() => toggleCategoryFilter(category.id)}
                       className={`px-2.5 py-1 rounded-lg text-lg font-medium text-white transition-all duration-200 hover:scale-[1.02] cursor-pointer ${
                         isSelected
-                          ? 'border-2 border-gray-900'
+                          ? 'border-2 border-gray-900 dark:border-gray-300'
                           : 'border-2 border-transparent'
                       }`}
                       style={{ 
@@ -3219,7 +3245,7 @@ function TasksView() {
                   onClick={() => toggleCategoryFilter('None')}
                   className={`px-2.5 py-1 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] cursor-pointer ${
                     categoryFilters.has('None')
-                      ? 'text-white shadow-md border-2 border-gray-900'
+                      ? 'text-white shadow-md border-2 border-black dark:border-white shadow-[inset_0_0_0_2px_white] dark:shadow-[inset_0_0_0_2px_black]'
                       : 'bg-gray-200 text-gray-700 border-2 border-transparent'
                   }`}
                   style={categoryFilters.has('None') ? { backgroundColor: '#6b7280' } : {}}
@@ -3299,10 +3325,10 @@ function TasksView() {
                         {/* Completion Checkbox */}
                         <input
                           type="checkbox"
-                          checked={task.status === 'Complete'}
+                          checked={task.status === 'Complete' || task.status === 'Dropped'}
                           onChange={(e) => toggleComplete(task, e as any)}
                           className="w-5 h-5 mt-0.5 cursor-pointer accent-green-600"
-                          title={task.status === 'Complete' ? 'Mark as incomplete' : 'Mark as complete'}
+                          title={(task.status === 'Complete' || task.status === 'Dropped') ? 'Mark as incomplete' : 'Mark as complete'}
                           style={{ accentColor: '#11551a' }}
                         />
                         {/* Today Circle Button */}
@@ -3327,7 +3353,7 @@ function TasksView() {
                           <div className="flex-1">
                             <div className="flex items-center gap-1.5">
                               <h4 className={`font-semibold text-base transition-colors ${
-                                  task.status === 'Complete' ? 'line-through text-gray-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-green-700 dark:group-hover:text-green-400'
+                                  (task.status === 'Complete' || task.status === 'Dropped') ? 'line-through text-gray-400' : 'text-gray-500 dark:text-gray-400 group-hover:text-green-700 dark:group-hover:text-green-400'
                               }`}>
                                 {task.title}
                               </h4>
@@ -3401,10 +3427,10 @@ function TasksView() {
                     {/* Completion Checkbox */}
                     <input
                       type="checkbox"
-                      checked={task.status === 'Complete'}
+                      checked={task.status === 'Complete' || task.status === 'Dropped'}
                       onChange={(e) => toggleComplete(task, e as any)}
                       className="w-6 h-6 mt-0.5 cursor-pointer"
-                      title={task.status === 'Complete' ? 'Mark as incomplete' : 'Mark as complete'}
+                      title={(task.status === 'Complete' || task.status === 'Dropped') ? 'Mark as incomplete' : 'Mark as complete'}
                       style={{ accentColor: '#11551a' }}
                     />
                     {/* Today Circle Button */}
@@ -3429,7 +3455,7 @@ function TasksView() {
                       <div className="flex-1">
                         <div className="flex items-center gap-1.5">
                           <h4 className={`font-semibold text-lg ${
-                            task.status === 'Complete' ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'
+                            (task.status === 'Complete' || task.status === 'Dropped') ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'
                           }`}>
                             {task.title}
                           </h4>
@@ -4684,7 +4710,7 @@ function CategoryManager({ categories: initialCategories, onClose }: any) {
   )
 }
 
-function JournalView() {
+function DailyView() {
   const [entries, setEntries] = useState<any[]>([])
   
   // Load saved date from localStorage
@@ -4715,6 +4741,9 @@ function JournalView() {
   const [habitCompletions, setHabitCompletions] = useState<Map<string, boolean>>(new Map())
   const [calibrationScores, setCalibrationScores] = useState<Map<string, number>>(new Map())
   const [todayItems, setTodayItems] = useState<Map<string, boolean>>(new Map())
+  const [completedTasks, setCompletedTasks] = useState<any[]>([])
+  const [selectedTask, setSelectedTask] = useState<any>(null)
+  const [categories, setCategories] = useState<any[]>([])
   const supabase = createClient()
 
   // Save selectedDate to localStorage whenever it changes
@@ -4733,6 +4762,7 @@ function JournalView() {
     loadHabitGroups()
     loadCalibrations()
     loadTodayItems()
+    loadCategories()
   }, [])
 
   const loadTodayItems = async () => {
@@ -4797,6 +4827,7 @@ function JournalView() {
     loadJournalForDate(selectedDate)
     loadHabitCompletions(selectedDate)
     loadCalibrationScores(selectedDate)
+    loadCompletedTasks(selectedDate)
   }, [selectedDate])
 
   const loadJournalForDate = async (date: string) => {
@@ -4911,6 +4942,151 @@ function JournalView() {
     setCalibrationScores(scores)
   }
 
+  const loadCompletedTasks = async (date: string) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: allTasks } = await supabase
+      .from('tasks')
+      .select('*, categories(*), sub_tasks(*)')
+      .eq('user_id', user?.id)
+      .order('created_at', { ascending: false })
+    
+    if (!allTasks) {
+      setCompletedTasks([])
+      return
+    }
+
+    // Filter tasks that:
+    // 1. Have completion_date matching the selected date, OR
+    // 2. Have sub-tasks with completion_date matching the selected date
+    const filtered = allTasks.filter(task => {
+      // Check if task itself was completed on this date
+      if (task.completion_date === date && (task.status === 'Complete' || task.status === 'Dropped')) {
+        return true
+      }
+      
+      // Check if any sub-task was completed on this date
+      if (task.sub_tasks && task.sub_tasks.length > 0) {
+        return task.sub_tasks.some((st: any) => st.completion_date === date)
+      }
+      
+      return false
+    })
+    
+    setCompletedTasks(filtered)
+  }
+
+  // Helper functions for displaying task info
+  const getCompletedPoints = (task: any): number => {
+    if (task.sub_tasks && task.sub_tasks.length > 0) {
+      // Sum points from completed subtasks
+      return task.sub_tasks
+        .filter((st: any) => st.completion_date !== null)
+        .reduce((sum: number, st: any) => sum + (st.points ?? 0), 0)
+    } else {
+      // If no subtasks, task is either fully completed (points) or not (0)
+      return (task.status === 'Complete' || task.status === 'Dropped') ? (task.points ?? 10) : 0
+    }
+  }
+
+  const getTotalPoints = (task: any): number => {
+    return task.points ?? 10
+  }
+
+  const getCompletedSubtasksCount = (task: any): number => {
+    if (!task.sub_tasks || task.sub_tasks.length === 0) return 0
+    return task.sub_tasks.filter((st: any) => st.completion_date !== null).length
+  }
+
+  const loadCategories = async () => {
+    const { data } = await supabase
+      .from('categories')
+      .select('*')
+      .order('sort_order')
+    if (data) setCategories(data)
+  }
+
+  const updateTask = async (id: string | null, updates: any) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    // Filter out non-updatable fields
+    const allowedFields = ['title', 'status', 'category_id', 'description', 'due_date', 'is_hard_deadline', 'completion_date', 'is_recurring', 'recurring_frequency', 'is_repeating', 'repeating_frequency', 'points']
+    const filteredUpdates: any = {}
+    for (const key of allowedFields) {
+      if (key in updates) {
+        filteredUpdates[key] = updates[key]
+      }
+    }
+    
+    // Only adjust completion_date when status is being updated
+    if ('status' in filteredUpdates) {
+      // Auto-set completion date when status changes to Complete or Dropped
+      if ((filteredUpdates.status === 'Complete' || filteredUpdates.status === 'Dropped') && !filteredUpdates.completion_date) {
+        filteredUpdates.completion_date = new Date().toISOString().split('T')[0]
+      }
+      
+      // Clear completion date if status is not Complete/Dropped
+      if (filteredUpdates.status !== 'Complete' && filteredUpdates.status !== 'Dropped') {
+        filteredUpdates.completion_date = null
+      }
+    }
+  
+    let error
+    let result
+    
+    if (id === null) {
+      // Create new task
+      const insertData = {
+        ...filteredUpdates,
+        points: filteredUpdates.points ?? 10,
+        user_id: user?.id
+      }
+      result = await supabase
+        .from('tasks')
+        .insert(insertData)
+        .select('*, categories(*)')
+        .single()
+      error = result.error
+    } else {
+      // Update existing task
+      result = await supabase
+        .from('tasks')
+        .update(filteredUpdates)
+        .eq('id', id)
+        .select('*, categories(*)')
+        .single()
+      error = result.error
+    }
+    
+    if (error) {
+      console.error('Full error:', JSON.stringify(error, null, 2))
+      alert('Error: ' + (error.message || 'Failed to save task'))
+      return null
+    } else {
+      // Reload completed tasks after update
+      await loadCompletedTasks(selectedDate)
+      // Update selectedTask if it's the one being updated
+      if (selectedTask && selectedTask.id === id) {
+        // Reload the task with sub_tasks
+        const { data: updatedTask } = await supabase
+          .from('tasks')
+          .select('*, categories(*), sub_tasks(*)')
+          .eq('id', id)
+          .single()
+        if (updatedTask) {
+          setSelectedTask(updatedTask)
+        }
+      }
+      return result.data
+    }
+  }
+
+  const deleteTask = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this task?')) return
+    await supabase.from('tasks').delete().eq('id', id)
+    await loadCompletedTasks(selectedDate)
+    if (selectedTask?.id === id) setSelectedTask(null)
+  }
+
   const toggleHabitCompletion = async (habitId: string, completed: boolean) => {
     const { data: { user } } = await supabase.auth.getUser()
     const newCompletions = new Map(habitCompletions)
@@ -4961,10 +5137,22 @@ function JournalView() {
 
   // Organize habits by group for display
   const getOrganizedHabits = () => {
+    const groupsById = new Map<string, any>(habitGroups.map(g => [g.id, g]))
+    const isGroupActive = (groupId: string) => {
+      const group = groupsById.get(groupId)
+      return !!group && isActiveOnDate(selectedDate, group)
+    }
+
+    const activeHabits = habits.filter(h => {
+      if (!isActiveOnDate(selectedDate, h)) return false
+      if (h.group_id) return isGroupActive(h.group_id)
+      return true
+    })
+
     const habitsByGroup = new Map<string, any[]>()
     const ungroupedHabits: any[] = []
 
-    habits.forEach(habit => {
+    activeHabits.forEach(habit => {
       if (habit.group_id) {
         if (!habitsByGroup.has(habit.group_id)) {
           habitsByGroup.set(habit.group_id, [])
@@ -4976,7 +5164,9 @@ function JournalView() {
     })
 
     // Get groups in order
-    const orderedGroups = habitGroups.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+    const orderedGroups = habitGroups
+      .filter(g => isActiveOnDate(selectedDate, g))
+      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
     const result: Array<{ type: 'group' | 'habit', data: any }> = []
 
     orderedGroups.forEach(group => {
@@ -5027,200 +5217,312 @@ function JournalView() {
   }
 
   const organizedHabits = getOrganizedHabits()
+  const calibrationsForDate = calibrations.filter(c => isActiveOnDate(selectedDate, c))
+  const isManaging = showHabitManager || showCalibrationManager
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-        <h2 className="text-2xl font-bold dark:text-white" style={{ color: '#11551a' }}>Daily Journal</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowHabitManager(true)}
-            className="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
-          >
-            Habits
-          </button>
-          <button
-            onClick={() => setShowCalibrationManager(true)}
-            className="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
-          >
-            Calibration
-          </button>
+      {!isManaging && (
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+          <h2 className="text-2xl font-bold dark:text-white" style={{ color: '#11551a' }}>Daily</h2>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowHabitManager(true)}
+              className="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
+            >
+              Habits
+            </button>
+            <button
+              onClick={() => setShowCalibrationManager(true)}
+              className="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
+            >
+              Calibration
+            </button>
+          </div>
         </div>
-      </div>
+      )}
       
-      {/* Date Selector */}
-      <div className="mb-5">
-        <label className="block text-lg font-medium text-gray-700 mb-1">
-          Select Date
-        </label>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigateDate('prev')}
-            className="text-white px-3 py-2 rounded-lg font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer flex items-center justify-center"
-            style={{ backgroundColor: '#11551a', fontSize: '20px' }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1a7a28')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
-            aria-label="Previous day"
-          >
-            ◀
-          </button>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            max={new Date().toISOString().split('T')[0]} // Can't select future dates
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          />
-          <button
-            onClick={() => navigateDate('next')}
-            disabled={selectedDate >= new Date().toISOString().split('T')[0]}
-            className="text-white px-3 py-2 rounded-lg font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-            style={{ backgroundColor: '#11551a', fontSize: '20px' }}
-            onMouseEnter={(e) => {
-              if (!e.currentTarget.disabled) {
-                e.currentTarget.style.backgroundColor = '#1a7a28'
-              }
-            }}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
-            aria-label="Next day"
-          >
-            ▶
-          </button>
-        </div>
-        <p className="text-lg text-gray-600 mt-1.5">{formatDate(selectedDate)}</p>
-      </div>
-
-      {loading ? (
-        <p className="text-gray-500 dark:text-gray-400 text-lg">Loading...</p>
+      {isManaging ? (
+        <>
+          {showHabitManager && (
+            <HabitManager
+              habits={habits}
+              habitGroups={habitGroups}
+              onClose={() => {
+                setShowHabitManager(false)
+                loadHabits()
+                loadHabitGroups()
+              }}
+            />
+          )}
+          {showCalibrationManager && (
+            <CalibrationManager
+              calibrations={calibrations}
+              onClose={() => {
+                setShowCalibrationManager(false)
+                loadCalibrations()
+              }}
+            />
+          )}
+        </>
       ) : (
         <>
-          {/* Display Mode */}
-          {!isEditing && content ? (
-            <div>
-              <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg border border-gray-200 dark:border-gray-600 min-h-[300px] whitespace-pre-wrap text-lg text-gray-900 dark:text-white">
-                {content}
-              </div>
-              <div className="flex gap-2 mt-3">
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="text-white px-4 py-2 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                  style={{ backgroundColor: '#11551a' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1a7a28')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
-                >
-                  Edit Entry
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* Edit Mode */
-            <div>
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Write about your day..."
-                className="w-full h-72 p-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-none text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          {/* Date Selector */}
+          <div className="mb-5">
+            <label className="block text-lg font-medium text-gray-700 mb-1">
+              Select Date
+            </label>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigateDate('prev')}
+                className="text-white px-3 py-2 rounded-lg font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer flex items-center justify-center"
+                style={{ backgroundColor: '#11551a', fontSize: '20px' }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1a7a28')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
+                aria-label="Previous day"
+              >
+                ◀
+              </button>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                max={new Date().toISOString().split('T')[0]} // Can't select future dates
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
-              <div className="flex justify-between items-center mt-3">
-                <div className="flex gap-2">
+              <button
+                onClick={() => navigateDate('next')}
+                disabled={selectedDate >= new Date().toISOString().split('T')[0]}
+                className="text-white px-3 py-2 rounded-lg font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                style={{ backgroundColor: '#11551a', fontSize: '20px' }}
+                onMouseEnter={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = '#1a7a28'
+                  }
+                }}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
+                aria-label="Next day"
+              >
+                ▶
+              </button>
+              <button
+                onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+                className="text-white px-3 py-2 rounded-lg font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer flex items-center justify-center"
+                style={{ backgroundColor: '#11551a', fontSize: '20px' }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1a7a28')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
+                aria-label="Go to today"
+              >
+                Today
+              </button>
+            </div>
+            <p className="text-lg text-gray-600 mt-1.5">{formatDate(selectedDate)}</p>
+          </div>
+
+          {/* Journal Subheading */}
+          <h3 className="text-xl font-semibold dark:text-white mb-4" style={{ color: '#11551a' }}>Journal</h3>
+
+          {loading ? (
+            <p className="text-gray-500 dark:text-gray-400 text-lg">Loading...</p>
+          ) : (
+            <>
+              {/* Display Mode */}
+              {!isEditing && content ? (
+                <div>
+                  <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg border border-gray-200 dark:border-gray-600 min-h-[300px] whitespace-pre-wrap text-lg text-gray-900 dark:text-white">
+                    {content}
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="text-white px-4 py-2 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                      style={{ backgroundColor: '#11551a' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1a7a28')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
+                    >
+                      Edit Entry
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Edit Mode */
+                <div>
+                  <textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder="Write about your day..."
+                    className="w-full h-72 p-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-none text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                  <div className="flex justify-between items-center mt-3">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={saveJournal}
+                        className="text-white px-4 py-2 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                        style={{ backgroundColor: '#11551a' }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1a7a28')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
+                      >
+                        Save Entry
+                      </button>
+                      {!isEditing && content && (
+                        <button
+                          onClick={cancelEdit}
+                          className="bg-gray-500 text-white px-4 py-2 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                    {saved && <span className="font-medium text-lg" style={{ color: '#11551a' }}>Saved!</span>}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {!isEditing && !content && (
+                <div className="text-center py-12">
+                  <p className="text-gray-500 mb-4 text-lg">No entry for this date</p>
                   <button
-                    onClick={saveJournal}
-                    className="text-white px-4 py-2 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    onClick={() => setIsEditing(true)}
+                    className="text-white px-5 py-2 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                     style={{ backgroundColor: '#11551a' }}
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1a7a28')}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
                   >
-                    Save Entry
+                    Write Entry
                   </button>
-                  {!isEditing && content && (
-                    <button
-                      onClick={cancelEdit}
-                      className="bg-gray-500 text-white px-4 py-2 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                  )}
                 </div>
-                {saved && <span className="font-medium text-lg" style={{ color: '#11551a' }}>Saved!</span>}
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* Empty State */}
-          {!isEditing && !content && (
-            <div className="text-center py-12">
-              <p className="text-gray-500 mb-4 text-lg">No journal entry for this date</p>
-              <button
-                onClick={() => setIsEditing(true)}
-                className="text-white px-5 py-2 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                style={{ backgroundColor: '#11551a' }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1a7a28')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#11551a')}
-              >
-                Write Entry
-              </button>
-            </div>
-          )}
-        </>
-      )}
+              {/* Calibration and Habits Sections */}
+              <>
+                {/* Calibration Section */}
+                {calibrationsForDate.length > 0 && (
+                    <div className="mt-5 pt-5">
+                      <h3 className="text-lg font-bold mb-3" style={{ color: '#11551a' }}>Calibration</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        {calibrationsForDate.map(calibration => {
+                          const currentScore = calibrationScores.get(calibration.id) || 0
+                          return (
+                            <div key={calibration.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between border border-gray-200 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 gap-2">
+                              <span className="font-medium text-lg">
+                                {calibration.name}
+                              </span>
+                              <div className="flex gap-1">
+                                {[1, 2, 3, 4, 5].map(score => (
+                                  <button
+                                    key={score}
+                                    onClick={() => setCalibrationScore(calibration.id, score)}
+                                    className={`w-9 h-9 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.05] cursor-pointer ${
+                                      currentScore === score
+                                        ? 'text-white shadow-md'
+                                        : 'bg-gray-200 text-gray-700'
+                                    }`}
+                                    style={currentScore === score ? { backgroundColor: '#11551a' } : {}}
+                                    onMouseEnter={(e) => {
+                                      if (currentScore !== score) {
+                                        e.currentTarget.style.backgroundColor = '#e0e0e0'
+                                      }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      if (currentScore !== score) {
+                                        e.currentTarget.style.backgroundColor = '#e5e7eb'
+                                      }
+                                    }}
+                                  >
+                                    {score}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
 
-      {/* Habits and Calibration Section */}
-      {(organizedHabits.length > 0 || calibrations.length > 0) && (
-        <div className="mt-5 pt-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Habits Section */}
-            {organizedHabits.length > 0 && (
-              <div>
-                <h3 className="text-lg font-bold mb-3" style={{ color: '#11551a' }}>Habits</h3>
-                <div className="space-y-2.5">
-                  {organizedHabits.map((item, index) => {
-                    if (item.type === 'group') {
-                      const { group, habits: groupHabits } = item.data
-                      const groupCompleted = groupHabits.some((h: any) => habitCompletions.get(h.id))
-                      return (
-                        <div key={`group-${group.id}`} className="border border-gray-200 dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700">
-                          <div className="flex items-center gap-2 mb-2">
-                            <input
-                              type="checkbox"
-                              checked={groupCompleted}
-                              onChange={(e) => {
-                                // Toggle first unchecked habit or uncheck all if all checked
-                                if (groupCompleted) {
-                                  // Uncheck all
-                                  groupHabits.forEach((h: any) => {
-                                    if (habitCompletions.get(h.id)) {
-                                      toggleHabitCompletion(h.id, false)
-                                    }
-                                  })
-                                } else {
-                                  // Check first unchecked habit
-                                  const firstUnchecked = groupHabits.find((h: any) => !habitCompletions.get(h.id))
-                                  if (firstUnchecked) {
-                                    toggleHabitCompletion(firstUnchecked.id, true)
-                                  }
-                                }
-                              }}
-                              className="w-5 h-5 cursor-pointer"
-                              style={{ accentColor: '#11551a' }}
-                            />
-                            <span className="font-medium text-lg">
-                              {group.name}
-                            </span>
-                          </div>
-                          <div className="ml-7 space-y-1.5">
-                            {groupHabits.map((habit: any) => (
-                              <div key={habit.id} className="flex items-center gap-2">
+                  {/* Habits Section */}
+                  {organizedHabits.length > 0 && (
+                    <div className="mt-5 pt-5">
+                      <h3 className="text-lg font-bold mb-3" style={{ color: '#11551a' }}>Habits</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        {organizedHabits.map((item, index) => {
+                          if (item.type === 'group') {
+                            const { group, habits: groupHabits } = item.data
+                            const groupCompleted = groupHabits.some((h: any) => habitCompletions.get(h.id))
+                            return (
+                              <div key={`group-${group.id}`} className="border border-gray-200 dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={groupCompleted}
+                                    onChange={(e) => {
+                                      // Toggle first unchecked habit or uncheck all if all checked
+                                      if (groupCompleted) {
+                                        // Uncheck all
+                                        groupHabits.forEach((h: any) => {
+                                          if (habitCompletions.get(h.id)) {
+                                            toggleHabitCompletion(h.id, false)
+                                          }
+                                        })
+                                      } else {
+                                        // Check first unchecked habit
+                                        const firstUnchecked = groupHabits.find((h: any) => !habitCompletions.get(h.id))
+                                        if (firstUnchecked) {
+                                          toggleHabitCompletion(firstUnchecked.id, true)
+                                        }
+                                      }
+                                    }}
+                                    className="w-5 h-5 cursor-pointer"
+                                    style={{ accentColor: '#11551a' }}
+                                  />
+                                  <span className="font-medium text-lg">
+                                    {group.name}
+                                  </span>
+                                </div>
+                                <div className="ml-7 space-y-1.5">
+                                  {groupHabits.map((habit: any) => (
+                                    <div key={habit.id} className="flex items-center gap-2">
+                                      <div className="flex items-center gap-1">
+                                        <input
+                                          type="checkbox"
+                                          checked={habitCompletions.get(habit.id) || false}
+                                          onChange={(e) => toggleHabitCompletion(habit.id, e.target.checked)}
+                                          className="w-4 h-4 cursor-pointer"
+                                          style={{ accentColor: '#11551a' }}
+                                        />
+                                        <button
+                                          onClick={(e) => toggleHabitInToday(habit.id, e)}
+                                          className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-all ${
+                                            todayItems.get(habit.id)
+                                              ? 'bg-green-600 border-green-600'
+                                              : 'border-gray-400 hover:border-green-600'
+                                          }`}
+                                          title={todayItems.get(habit.id) ? 'Remove from today' : 'Add to today'}
+                                          style={todayItems.get(habit.id) ? { backgroundColor: '#11551a', borderColor: '#11551a' } : {}}
+                                        />
+                                      </div>
+                                      <span className="text-lg">{habit.name}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )
+                          } else {
+                            const habit = item.data
+                            return (
+                              <div key={habit.id} className="flex items-center gap-2 border border-gray-200 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700">
                                 <div className="flex items-center gap-1">
                                   <input
                                     type="checkbox"
                                     checked={habitCompletions.get(habit.id) || false}
                                     onChange={(e) => toggleHabitCompletion(habit.id, e.target.checked)}
-                                    className="w-4 h-4 cursor-pointer"
+                                    className="w-5 h-5 cursor-pointer"
                                     style={{ accentColor: '#11551a' }}
                                   />
                                   <button
                                     onClick={(e) => toggleHabitInToday(habit.id, e)}
-                                    className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-all ${
+                                    className={`w-5 h-5 rounded-full border-2 flex-shrink-0 transition-all ${
                                       todayItems.get(habit.id)
                                         ? 'bg-green-600 border-green-600'
                                         : 'border-gray-400 hover:border-green-600'
@@ -5231,113 +5533,178 @@ function JournalView() {
                                 </div>
                                 <span className="text-lg">{habit.name}</span>
                               </div>
-                            ))}
-                          </div>
-                        </div>
-                      )
-                    } else {
-                      const habit = item.data
-                      return (
-                        <div key={habit.id} className="flex items-center gap-2 border border-gray-200 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700">
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="checkbox"
-                              checked={habitCompletions.get(habit.id) || false}
-                              onChange={(e) => toggleHabitCompletion(habit.id, e.target.checked)}
-                              className="w-5 h-5 cursor-pointer"
-                              style={{ accentColor: '#11551a' }}
-                            />
-                            <button
-                              onClick={(e) => toggleHabitInToday(habit.id, e)}
-                              className={`w-5 h-5 rounded-full border-2 flex-shrink-0 transition-all ${
-                                todayItems.get(habit.id)
-                                  ? 'bg-green-600 border-green-600'
-                                  : 'border-gray-400 hover:border-green-600'
-                              }`}
-                              title={todayItems.get(habit.id) ? 'Remove from today' : 'Add to today'}
-                              style={todayItems.get(habit.id) ? { backgroundColor: '#11551a', borderColor: '#11551a' } : {}}
-                            />
-                          </div>
-                          <span className="text-lg">{habit.name}</span>
-                        </div>
-                      )
-                    }
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Calibration Section */}
-            {calibrations.length > 0 && (
-              <div>
-                <h3 className="text-lg font-bold mb-3" style={{ color: '#11551a' }}>Calibration</h3>
-                <div className="space-y-2.5">
-                  {calibrations.map(calibration => {
-                    const currentScore = calibrationScores.get(calibration.id) || 0
-                    return (
-                      <div key={calibration.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between border border-gray-200 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-700 gap-2">
-                        <span className="font-medium text-lg">
-                          {calibration.name}
-                        </span>
-                        <div className="flex gap-1">
-                          {[1, 2, 3, 4, 5].map(score => (
-                            <button
-                              key={score}
-                              onClick={() => setCalibrationScore(calibration.id, score)}
-                              className={`w-9 h-9 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.05] cursor-pointer ${
-                                currentScore === score
-                                  ? 'text-white shadow-md'
-                                  : 'bg-gray-200 text-gray-700'
-                              }`}
-                              style={currentScore === score ? { backgroundColor: '#11551a' } : {}}
-                              onMouseEnter={(e) => {
-                                if (currentScore !== score) {
-                                  e.currentTarget.style.backgroundColor = '#e0e0e0'
-                                }
-                              }}
-                              onMouseLeave={(e) => {
-                                if (currentScore !== score) {
-                                  e.currentTarget.style.backgroundColor = '#e5e7eb'
-                                }
-                              }}
-                            >
-                              {score}
-                            </button>
-                          ))}
-                        </div>
+                            )
+                          }
+                        })}
                       </div>
-                    )
-                  })}
+                    </div>
+                  )}
+              </>
+            </>
+          )}
+
+          {/* Completed Tasks Section */}
+          <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
+            <h3 className="text-xl font-bold mb-4 dark:text-white" style={{ color: '#11551a' }}>Completed Tasks</h3>
+            {selectedTask ? (
+              <TaskDetailView
+                task={selectedTask}
+                categories={categories}
+                onClose={() => setSelectedTask(null)}
+                onUpdate={updateTask}
+                onDelete={deleteTask}
+                onShowCategories={() => {}}
+              />
+            ) : (
+              <>
+                {completedTasks.length === 0 ? (
+                  <p className="text-gray-500 dark:text-gray-400 text-lg">No tasks completed on this date.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Desktop: Grid layout */}
+                    <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {completedTasks.map((task) => (
+                        <div
+                          key={task.id}
+                          onClick={() => setSelectedTask(task)}
+                          className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-all duration-200 p-4 flex flex-col cursor-pointer active:scale-[0.98]"
+                          style={{ minHeight: '140px' }}
+                        >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <h4 className={`font-semibold text-lg ${
+                              (task.status === 'Complete' || task.status === 'Dropped') ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'
+                            }`}>
+                              {task.title}
+                            </h4>
+                            {(task.is_recurring === true || task.is_recurring === 'true') && (
+                              <span className="text-base" title="Recurring task">🔁</span>
+                            )}
+                            {(task.is_repeating === true || task.is_repeating === 'true') && (
+                              <span className="text-base" title="Repeating task">⏭️</span>
+                            )}
+                            {task.sub_tasks && task.sub_tasks.length > 0 && (
+                              <span className="text-base" title={`${task.sub_tasks.length} subtask${task.sub_tasks.length > 1 ? 's' : ''}`}>📋</span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500 flex items-center gap-2">
+                            <span>{task.status}</span>
+                            <span className="text-gray-400">•</span>
+                            <span>Points: {getCompletedPoints(task)}/{getTotalPoints(task)}</span>
+                            {task.sub_tasks && task.sub_tasks.length > 0 && (
+                              <>
+                                <span className="text-gray-400">•</span>
+                                <span>Subtasks: {getCompletedSubtasksCount(task)}/{task.sub_tasks.length}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        {task.categories && (
+                          <span
+                            className="inline-block px-2 py-0.5 rounded-md text-sm text-white font-medium flex-shrink-0"
+                            style={{ backgroundColor: task.categories.color }}
+                          >
+                            {task.categories.name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-auto pt-2">
+                        {(task.due_date || task.completion_date) && (
+                          <p className="text-sm">
+                            {task.due_date && (
+                              <span className={task.is_hard_deadline ? 'font-bold text-red-600' : 'text-gray-600'}>
+                                Due: {new Date(task.due_date + 'T00:00:00').toLocaleDateString()}
+                                {task.is_hard_deadline && <span className="ml-1" style={{ fontSize: '16px' }}>❗</span>}
+                              </span>
+                            )}
+                            {task.due_date && task.completion_date && <span className="mx-2 text-gray-400">|</span>}
+                            {task.completion_date && (
+                              <span style={{ color: '#11551a' }}>
+                                ✓ {new Date(task.completion_date + 'T00:00:00').toLocaleDateString()}
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+
+                    {/* Mobile: Single column */}
+                    <div className="md:hidden space-y-3">
+                      {completedTasks.map((task) => (
+                        <div
+                          key={task.id}
+                          onClick={() => setSelectedTask(task)}
+                          className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-3 cursor-pointer active:scale-[0.98] transition-all duration-200"
+                          style={{ minHeight: '120px' }}
+                        >
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <h4 className={`font-semibold text-lg ${
+                              (task.status === 'Complete' || task.status === 'Dropped') ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'
+                            }`}>
+                              {task.title}
+                            </h4>
+                            {(task.is_recurring === true || task.is_recurring === 'true') && (
+                              <span className="text-lg" title="Recurring task">🔁</span>
+                            )}
+                            {(task.is_repeating === true || task.is_repeating === 'true') && (
+                              <span className="text-lg" title="Repeating task">⏭️</span>
+                            )}
+                          </div>
+                          <div className="mt-1 text-base text-gray-500 flex items-center gap-2">
+                            <span>{task.status}</span>
+                            <span className="text-gray-400">•</span>
+                            <span>Points: {getCompletedPoints(task)}/{getTotalPoints(task)}</span>
+                            {task.sub_tasks && task.sub_tasks.length > 0 && (
+                              <>
+                                <span className="text-gray-400">•</span>
+                                <span>Subtasks: {getCompletedSubtasksCount(task)}/{task.sub_tasks.length}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        {task.categories && (
+                          <span
+                            className="inline-block px-2.5 py-1 rounded-md text-sm text-white font-medium flex-shrink-0"
+                            style={{ backgroundColor: task.categories.color }}
+                          >
+                            {task.categories.name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-2 pt-2">
+                        {(task.due_date || task.completion_date) && (
+                          <p className="text-base">
+                            {task.due_date && (
+                              <span className={task.is_hard_deadline ? 'font-bold text-red-600' : 'text-gray-600'}>
+                                Due: {new Date(task.due_date + 'T00:00:00').toLocaleDateString()}
+                                {task.is_hard_deadline && <span className="ml-1" style={{ fontSize: '18px' }}>❗</span>}
+                              </span>
+                            )}
+                            {task.due_date && task.completion_date && <span className="mx-2 text-gray-400">|</span>}
+                            {task.completion_date && (
+                              <span style={{ color: '#11551a' }}>
+                                ✓ {new Date(task.completion_date + 'T00:00:00').toLocaleDateString()}
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
-        </div>
+        </>
       )}
 
-      {/* Habit Manager Modal */}
-      {showHabitManager && (
-        <HabitManager
-          habits={habits}
-          habitGroups={habitGroups}
-          onClose={() => {
-            setShowHabitManager(false)
-            loadHabits()
-            loadHabitGroups()
-          }}
-        />
-      )}
-
-      {/* Calibration Manager Modal */}
-      {showCalibrationManager && (
-        <CalibrationManager
-          calibrations={calibrations}
-          onClose={() => {
-            setShowCalibrationManager(false)
-            loadCalibrations()
-          }}
-        />
-      )}
     </div>
   )
 }
@@ -5346,7 +5713,9 @@ function CalibrationManager({ calibrations: initialCalibrations, onClose }: any)
   const [calibrations, setCalibrations] = useState(initialCalibrations)
   const [newCalibrationName, setNewCalibrationName] = useState('')
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [showDeactivated, setShowDeactivated] = useState(false)
   const supabase = createClient()
+  const todayStr = new Date().toISOString().split('T')[0]
 
   const addCalibration = async () => {
     if (!newCalibrationName.trim()) return
@@ -5361,7 +5730,8 @@ function CalibrationManager({ calibrations: initialCalibrations, onClose }: any)
       name: newCalibrationName,
       color: '#000000', // Default color (not displayed)
       user_id: user?.id,
-      sort_order: maxSortOrder + 1
+      sort_order: maxSortOrder + 1,
+      active_from: todayStr
     }).select().single()
     
     if (error) {
@@ -5443,83 +5813,137 @@ function CalibrationManager({ calibrations: initialCalibrations, onClose }: any)
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-5 max-w-2xl w-full max-h-[85vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-5">
-          <h2 className="text-2xl font-bold dark:text-white" style={{ color: '#11551a' }}>Calibration</h2>
+    <div className="w-full">
+      <div className="flex justify-between items-center mb-5">
+        <h2 className="text-2xl font-bold dark:text-white" style={{ color: '#11551a' }}>Set Calibration</h2>
+        <button
+          onClick={onClose}
+          className="text-gray-500 hover:text-gray-700 text-3xl font-light cursor-pointer transition-colors"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="flex justify-end mb-5">
+        <button
+          onClick={() => setShowDeactivated(v => !v)}
+          className="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
+        >
+          {showDeactivated ? 'Show Active' : 'Show Deactivated'}
+        </button>
+      </div>
+
+      <div className="mb-5">
+        <h3 className="font-bold mb-2 text-lg">Add New Calibration</h3>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Calibration name"
+            value={newCalibrationName}
+            onChange={(e) => setNewCalibrationName(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && addCalibration()}
+            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          />
           <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-3xl font-light cursor-pointer transition-colors"
+            onClick={addCalibration}
+            className="text-white px-4 py-2 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            style={{ backgroundColor: '#f6d413' }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e5c312')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f6d413')}
           >
-            ×
+            Add
           </button>
         </div>
+      </div>
 
-        <div className="mb-5">
-          <h3 className="font-bold mb-2 text-lg">Add New Calibration</h3>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Calibration name"
-              value={newCalibrationName}
-              onChange={(e) => setNewCalibrationName(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && addCalibration()}
-              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            />
-            <button
-              onClick={addCalibration}
-              className="text-white px-4 py-2 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-              style={{ backgroundColor: '#f6d413' }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e5c312')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f6d413')}
-            >
-              Add
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="font-bold mb-2 text-lg">Existing Calibrations</h3>
-          {calibrations.length === 0 ? (
-            <p className="text-gray-500 text-center py-8 text-lg">No calibrations yet. Add one above!</p>
-          ) : (
-            <div className="space-y-2">
-              {calibrations.map((cal: any, index: number) => (
-                <div
-                  key={cal.id}
-                  draggable
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDragEnd={handleDragEnd}
-                  className="flex items-center justify-between p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-move transition-colors"
-                >
-                  <div className="flex items-center gap-2.5 flex-1">
-                    <span className="text-gray-400 text-lg" title="Drag to reorder">☰</span>
-                    <input
-                      type="text"
-                      value={cal.name}
-                      onChange={(e) => updateCalibration(cal.id, { name: e.target.value })}
-                      className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      onClick={(e) => e.stopPropagation()}
-                    />
+      <div>
+        <h3 className="font-bold mb-2 text-lg">Existing Calibrations</h3>
+        {calibrations.length === 0 ? (
+          <p className="text-gray-500 text-center py-8 text-lg">No calibrations yet. Add one above!</p>
+        ) : (
+          <div className="space-y-2">
+            {calibrations
+              .map((cal: any, fullIndex: number) => ({ cal, fullIndex }))
+              .filter(({ cal }: { cal: any }) => (showDeactivated ? !!cal.active_to : !cal.active_to))
+              .map(({ cal, fullIndex }: { cal: any, fullIndex: number }) => (
+              <div
+                key={cal.id}
+                draggable
+                onDragStart={() => handleDragStart(fullIndex)}
+                onDragOver={(e) => handleDragOver(e, fullIndex)}
+                onDragEnd={handleDragEnd}
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-move transition-colors gap-2"
+              >
+                <div className="flex items-center gap-2.5 flex-1">
+                  <span className="text-gray-400 text-lg" title="Drag to reorder">☰</span>
+                  <input
+                    type="text"
+                    value={cal.name}
+                    onChange={(e) => updateCalibration(cal.id, { name: e.target.value })}
+                    className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <div className="hidden sm:flex items-center gap-2">
+                    <div className="flex flex-col">
+                      <label className="text-xs text-gray-500 dark:text-gray-400">Active from</label>
+                      <input
+                        type="date"
+                        value={cal.active_from || ''}
+                        max={cal.active_to || undefined}
+                        onChange={(e) => updateCalibration(cal.id, { active_from: e.target.value || todayStr })}
+                        className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="text-xs text-gray-500 dark:text-gray-400">Active to</label>
+                      <input
+                        type="date"
+                        value={cal.active_to || ''}
+                        min={cal.active_from || undefined}
+                        onChange={(e) => updateCalibration(cal.id, { active_to: toDateOrNull(e.target.value) })}
+                        className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      deleteCalibration(cal.id)
-                    }}
-                    className="ml-3 text-lg font-medium transition-colors cursor-pointer"
-                    style={{ color: '#f56714' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = '#e55d13')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = '#f56714')}
-                  >
-                    Delete
-                  </button>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                <div className="sm:hidden flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={cal.active_from || ''}
+                    max={cal.active_to || undefined}
+                    onChange={(e) => updateCalibration(cal.id, { active_from: e.target.value || todayStr })}
+                    className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    onClick={(e) => e.stopPropagation()}
+                    title="Active from"
+                  />
+                  <input
+                    type="date"
+                    value={cal.active_to || ''}
+                    min={cal.active_from || undefined}
+                    onChange={(e) => updateCalibration(cal.id, { active_to: toDateOrNull(e.target.value) })}
+                    className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    onClick={(e) => e.stopPropagation()}
+                    title="Active to"
+                  />
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    deleteCalibration(cal.id)
+                  }}
+                  className="ml-3 text-lg font-medium transition-colors cursor-pointer self-end sm:self-auto"
+                  style={{ color: '#f56714' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#e55d13')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = '#f56714')}
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -5534,7 +5958,9 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [draggedType, setDraggedType] = useState<'habit' | 'group' | 'habit-in-group' | null>(null)
   const [draggedHabitInfo, setDraggedHabitInfo] = useState<{ habitId: string, groupId: string } | null>(null)
+  const [showDeactivated, setShowDeactivated] = useState(false)
   const supabase = createClient()
+  const todayStr = new Date().toISOString().split('T')[0]
 
   const getOrganizedItems = () => {
     const items: Array<{ type: 'group' | 'habit', data: any, index: number }> = []
@@ -5598,7 +6024,8 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
       color: '#000000', // Default color (not displayed)
       user_id: user?.id,
       group_id: selectedGroup || null,
-      sort_order: maxSortOrder + 1
+      sort_order: maxSortOrder + 1,
+      active_from: todayStr
     }).select().single()
     
     if (error) {
@@ -5623,7 +6050,8 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
       name: newHabitGroupName,
       color: '#000000', // Default color (not displayed)
       user_id: user?.id,
-      sort_order: maxSortOrder + 1
+      sort_order: maxSortOrder + 1,
+      active_from: todayStr
     }).select().single()
     
     if (error) {
@@ -5689,6 +6117,38 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
       setHabitGroups(habitGroups.map((g: any) => 
         g.id === id ? { ...g, ...updates } : g
       ))
+    }
+  }
+
+  const setHabitGroupActiveTo = async (groupId: string, activeTo: string | null) => {
+    const { error } = await supabase
+      .from('habit_groups')
+      .update({ active_to: activeTo })
+      .eq('id', groupId)
+
+    if (error) {
+      alert('Error updating habit group: ' + error.message)
+      return
+    }
+
+    setHabitGroups((prev: any[]) => prev.map((g: any) => (g.id === groupId ? { ...g, active_to: activeTo } : g)))
+
+    // If a group is deactivated, all habits in the group should be deactivated at the same date.
+    if (activeTo) {
+      const [resNull, resGt] = await Promise.all([
+        supabase.from('habits').update({ active_to: activeTo }).eq('group_id', groupId).is('active_to', null),
+        supabase.from('habits').update({ active_to: activeTo }).eq('group_id', groupId).gt('active_to', activeTo)
+      ])
+
+      if (resNull.error || resGt.error) {
+        alert('Error deactivating habits in group')
+      } else {
+        setHabits((prev: any[]) => prev.map((h: any) => {
+          if (h.group_id !== groupId) return h
+          if (!h.active_to || h.active_to > activeTo) return { ...h, active_to: activeTo }
+          return h
+        }))
+      }
     }
   }
 
@@ -5801,15 +6261,23 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
   const organizedItems = getOrganizedItems()
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-5 max-w-2xl w-full max-h-[85vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-5">
-          <h2 className="text-2xl font-bold" style={{ color: '#11551a' }}>Habits</h2>
+    <div className="w-full">
+      <div className="flex justify-between items-center mb-5">
+        <h2 className="text-2xl font-bold" style={{ color: '#11551a' }}>Set Habits</h2>
+        <button
+          onClick={onClose}
+          className="text-gray-500 hover:text-gray-700 text-3xl font-light cursor-pointer transition-colors"
+        >
+          ×
+        </button>
+      </div>
+
+        <div className="flex justify-end mb-5">
           <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-3xl font-light cursor-pointer transition-colors"
+            onClick={() => setShowDeactivated(v => !v)}
+            className="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-base font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-600 cursor-pointer"
           >
-            ×
+            {showDeactivated ? 'Show Active' : 'Show Deactivated'}
           </button>
         </div>
 
@@ -5853,7 +6321,7 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
               className="px-2 py-2 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all cursor-pointer"
             >
               <option value="">No group</option>
-              {habitGroups.map((g: any) => (
+              {habitGroups.filter((g: any) => !g.active_to).map((g: any) => (
                 <option key={g.id} value={g.id}>{g.name}</option>
               ))}
             </select>
@@ -5875,20 +6343,25 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
             <p className="text-gray-500 text-center py-8 text-lg">No habits yet. Add one above!</p>
           ) : (
             <div className="space-y-2">
-              {organizedItems.map((item, index) => {
+              {organizedItems.map((item) => {
                 if (item.type === 'group') {
-                  const { group, habits: groupHabits } = item.data
+                  const { group, habits: groupHabitsAll } = item.data
+                  const groupMatches = showDeactivated ? !!group.active_to : !group.active_to
+                  const groupHabits = (groupHabitsAll || []).filter((h: any) => (showDeactivated ? !!h.active_to : !h.active_to))
+                  const shouldShowGroup = groupMatches || groupHabits.length > 0
+                  if (!shouldShowGroup) return null
+
                   return (
                     <div
                       key={`group-${group.id}`}
                       draggable
-                      onDragStart={() => handleDragStart(index, 'group')}
-                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragStart={() => handleDragStart(item.index, 'group')}
+                      onDragOver={(e) => handleDragOver(e, item.index)}
                       onDragEnd={handleDragEnd}
                       className="border border-gray-200 dark:border-gray-600 rounded-lg p-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-move transition-colors"
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2.5 flex-1">
+                      <div className="flex items-start justify-between mb-2 gap-2">
+                        <div className="flex items-center gap-2.5 flex-1 flex-wrap">
                           <span className="text-gray-400 text-lg">☰</span>
                           <input
                             type="text"
@@ -5897,6 +6370,30 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
                             className="flex-1 px-2 py-1 border border-gray-300 rounded-lg text-lg font-medium focus:outline-none focus:ring-2 transition-all"
                             onClick={(e) => e.stopPropagation()}
                           />
+                          <div className="hidden sm:flex items-center gap-2">
+                            <div className="flex flex-col">
+                              <label className="text-xs text-gray-500 dark:text-gray-400">Active from</label>
+                              <input
+                                type="date"
+                                value={group.active_from || ''}
+                                max={group.active_to || undefined}
+                                onChange={(e) => updateHabitGroup(group.id, { active_from: e.target.value || todayStr })}
+                                className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                            <div className="flex flex-col">
+                              <label className="text-xs text-gray-500 dark:text-gray-400">Active to</label>
+                              <input
+                                type="date"
+                                value={group.active_to || ''}
+                                min={group.active_from || undefined}
+                                onChange={(e) => setHabitGroupActiveTo(group.id, toDateOrNull(e.target.value))}
+                                className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          </div>
                         </div>
                         <button
                           onClick={(e) => {
@@ -5910,6 +6407,30 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
                         >
                           Delete Group
                         </button>
+                      </div>
+                      <div className="sm:hidden ml-9 mb-2 flex flex-col gap-2">
+                        <div className="flex flex-col">
+                          <label className="text-xs text-gray-500 dark:text-gray-400">Active from</label>
+                          <input
+                            type="date"
+                            value={group.active_from || ''}
+                            max={group.active_to || undefined}
+                            onChange={(e) => updateHabitGroup(group.id, { active_from: e.target.value || todayStr })}
+                            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                        <div className="flex flex-col">
+                          <label className="text-xs text-gray-500 dark:text-gray-400">Active to</label>
+                          <input
+                            type="date"
+                            value={group.active_to || ''}
+                            min={group.active_from || undefined}
+                            onChange={(e) => setHabitGroupActiveTo(group.id, toDateOrNull(e.target.value))}
+                            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
                       </div>
                       <div className="ml-9 space-y-1.5">
                         {groupHabits.map((habit: any, habitIndex: number) => (
@@ -5967,7 +6488,7 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
                               setDraggedType(null)
                               setDraggedHabitInfo(null)
                             }}
-                            className="flex items-center justify-between p-2 bg-gray-50 rounded-lg cursor-move transition-colors"
+                            className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 bg-gray-50 rounded-lg cursor-move transition-colors gap-2"
                           >
                             <div className="flex items-center gap-2 flex-1">
                               <input
@@ -5977,13 +6498,53 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
                                 className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                 onClick={(e) => e.stopPropagation()}
                               />
+                              <div className="hidden sm:flex items-center gap-2">
+                                <input
+                                  type="date"
+                                  value={habit.active_from || ''}
+                                  max={habit.active_to || undefined}
+                                  onChange={(e) => updateHabit(habit.id, { active_from: e.target.value || todayStr })}
+                                  className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="Active from"
+                                />
+                                <input
+                                  type="date"
+                                  value={habit.active_to || ''}
+                                  min={habit.active_from || undefined}
+                                  onChange={(e) => updateHabit(habit.id, { active_to: toDateOrNull(e.target.value) })}
+                                  className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="Active to"
+                                />
+                              </div>
+                            </div>
+                            <div className="sm:hidden flex items-center gap-2">
+                              <input
+                                type="date"
+                                value={habit.active_from || ''}
+                                max={habit.active_to || undefined}
+                                onChange={(e) => updateHabit(habit.id, { active_from: e.target.value || todayStr })}
+                                className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                onClick={(e) => e.stopPropagation()}
+                                title="Active from"
+                              />
+                              <input
+                                type="date"
+                                value={habit.active_to || ''}
+                                min={habit.active_from || undefined}
+                                onChange={(e) => updateHabit(habit.id, { active_to: toDateOrNull(e.target.value) })}
+                                className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                onClick={(e) => e.stopPropagation()}
+                                title="Active to"
+                              />
                             </div>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
                                 deleteHabit(habit.id)
                               }}
-                              className="ml-2 text-lg font-medium transition-colors cursor-pointer"
+                              className="ml-2 text-lg font-medium transition-colors cursor-pointer self-end sm:self-auto"
                               style={{ color: '#f56714' }}
                               onMouseEnter={(e) => (e.currentTarget.style.color = '#e55d13')}
                               onMouseLeave={(e) => (e.currentTarget.style.color = '#f56714')}
@@ -5997,14 +6558,16 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
                   )
                 } else {
                   const habit = item.data
+                  const habitMatches = showDeactivated ? !!habit.active_to : !habit.active_to
+                  if (!habitMatches) return null
                   return (
                     <div
                       key={habit.id}
                       draggable
-                      onDragStart={() => handleDragStart(index, 'habit')}
-                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragStart={() => handleDragStart(item.index, 'habit')}
+                      onDragOver={(e) => handleDragOver(e, item.index)}
                       onDragEnd={handleDragEnd}
-                      className="flex items-center justify-between p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-move transition-colors"
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-move transition-colors gap-2"
                     >
                       <div className="flex items-center gap-2.5 flex-1">
                         <span className="text-gray-400 text-lg">☰</span>
@@ -6015,13 +6578,57 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
                           className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-lg focus:outline-none focus:ring-2 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           onClick={(e) => e.stopPropagation()}
                         />
+                        <div className="hidden sm:flex items-center gap-2">
+                          <div className="flex flex-col">
+                            <label className="text-xs text-gray-500 dark:text-gray-400">From</label>
+                            <input
+                              type="date"
+                              value={habit.active_from || ''}
+                              max={habit.active_to || undefined}
+                              onChange={(e) => updateHabit(habit.id, { active_from: e.target.value || todayStr })}
+                              className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                          <div className="flex flex-col">
+                            <label className="text-xs text-gray-500 dark:text-gray-400">To</label>
+                            <input
+                              type="date"
+                              value={habit.active_to || ''}
+                              min={habit.active_from || undefined}
+                              onChange={(e) => updateHabit(habit.id, { active_to: toDateOrNull(e.target.value) })}
+                              className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="sm:hidden flex items-center gap-2">
+                        <input
+                          type="date"
+                          value={habit.active_from || ''}
+                          max={habit.active_to || undefined}
+                          onChange={(e) => updateHabit(habit.id, { active_from: e.target.value || todayStr })}
+                          className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          onClick={(e) => e.stopPropagation()}
+                          title="Active from"
+                        />
+                        <input
+                          type="date"
+                          value={habit.active_to || ''}
+                          min={habit.active_from || undefined}
+                          onChange={(e) => updateHabit(habit.id, { active_to: toDateOrNull(e.target.value) })}
+                          className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          onClick={(e) => e.stopPropagation()}
+                          title="Active to"
+                        />
                       </div>
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
                           deleteHabit(habit.id)
                         }}
-                        className="ml-3 text-lg font-medium transition-colors cursor-pointer"
+                        className="ml-3 text-lg font-medium transition-colors cursor-pointer self-end sm:self-auto"
                         style={{ color: '#f56714' }}
                         onMouseEnter={(e) => (e.currentTarget.style.color = '#e55d13')}
                         onMouseLeave={(e) => (e.currentTarget.style.color = '#f56714')}
@@ -6036,6 +6643,5 @@ function HabitManager({ habits: initialHabits, habitGroups: initialHabitGroups, 
           )}
         </div>
       </div>
-    </div>
   )
 }
