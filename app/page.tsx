@@ -1416,6 +1416,52 @@ function TodayView() {
     setDragOverItemId(null)
   }
 
+  const calculateNextDueDate = (currentDueDate: string, frequency: any): string => {
+    const date = new Date(currentDueDate + 'T00:00:00')
+    
+    try {
+      const parsed = typeof frequency === 'string' ? JSON.parse(frequency) : frequency
+      if (parsed.interval && parsed.unit) {
+        const interval = parsed.interval
+        switch (parsed.unit) {
+          case 'days':
+            date.setDate(date.getDate() + interval)
+            break
+          case 'weeks':
+            date.setDate(date.getDate() + (interval * 7))
+            break
+          case 'months':
+            date.setMonth(date.getMonth() + interval)
+            break
+          case 'years':
+            date.setFullYear(date.getFullYear() + interval)
+            break
+        }
+        return date.toISOString().split('T')[0]
+      }
+    } catch {
+      // Not JSON, treat as simple string
+    }
+    
+    // Handle simple frequency strings
+    switch (frequency) {
+      case 'daily':
+        date.setDate(date.getDate() + 1)
+        break
+      case 'weekly':
+        date.setDate(date.getDate() + 7)
+        break
+      case 'monthly':
+        date.setMonth(date.getMonth() + 1)
+        break
+      case 'yearly':
+        date.setFullYear(date.getFullYear() + 1)
+        break
+    }
+    
+    return date.toISOString().split('T')[0]
+  }
+
   const toggleTaskComplete = async (task: any, e: React.MouseEvent) => {
     e.stopPropagation()
     
@@ -1587,6 +1633,7 @@ function TodayView() {
           onClose={() => setSelectedTask(null)}
           onUpdate={async (id: string | null, updates: any) => {
             const { data: { user } } = await supabase.auth.getUser()
+            const skipRecurrence = updates?._skipRecurrence === true
             const allowedFields = ['title', 'status', 'category_id', 'description', 'due_date', 'is_hard_deadline', 'completion_date', 'is_recurring', 'recurring_frequency', 'is_repeating', 'repeating_frequency', 'points']
             const filteredUpdates: any = {}
             for (const key of allowedFields) {
@@ -1602,6 +1649,78 @@ function TodayView() {
               }
               if (filteredUpdates.status !== 'Complete' && filteredUpdates.status !== 'Dropped') {
                 filteredUpdates.completion_date = null
+              }
+            }
+            
+            // If marking task as Complete, check if it's recurring or repeating and create new task
+            if (!skipRecurrence && id !== null && 'status' in filteredUpdates && (filteredUpdates.status === 'Complete' || filteredUpdates.status === 'Dropped')) {
+              // Fetch the original task to check if it's recurring/repeating
+              const { data: originalTask } = await supabase
+                .from('tasks')
+                .select('*')
+                .eq('id', id)
+                .single()
+              
+              if (originalTask) {
+                const isDone = originalTask.status === 'Complete' || originalTask.status === 'Dropped'
+                
+                // If completing a recurring task, create a duplicate with next due date
+                const isRecurring = originalTask.is_recurring === true || originalTask.is_recurring === 'true' || originalTask.is_recurring === 1
+                if (!isDone && isRecurring && originalTask.recurring_frequency && originalTask.due_date) {
+                  const nextDueDate = calculateNextDueDate(originalTask.due_date, originalTask.recurring_frequency)
+                  
+                  // Create duplicate task
+                  const duplicateTask = {
+                    title: originalTask.title,
+                    status: 'To do',
+                    category_id: originalTask.category_id,
+                    description: originalTask.description,
+                    due_date: nextDueDate,
+                    is_hard_deadline: originalTask.is_hard_deadline,
+                    is_recurring: originalTask.is_recurring,
+                    recurring_frequency: originalTask.recurring_frequency,
+                    is_repeating: originalTask.is_repeating || false,
+                    repeating_frequency: originalTask.repeating_frequency || null,
+                    points: originalTask.points ?? 10,
+                    user_id: user?.id
+                  }
+                  
+                  const { error: insertError } = await supabase.from('tasks').insert(duplicateTask)
+                  if (insertError) {
+                    console.error('Error creating recurring task:', insertError)
+                  }
+                }
+                
+                // If completing a repeating task, create a duplicate with next due date after completion
+                const isRepeating = originalTask.is_repeating === true || originalTask.is_repeating === 'true' || originalTask.is_repeating === 1
+                if (!isDone && isRepeating && originalTask.repeating_frequency) {
+                  // Calculate next due date from today (completion date) instead of original due date
+                  const today = new Date()
+                  today.setHours(0, 0, 0, 0)
+                  const todayStr = today.toISOString().split('T')[0]
+                  const nextDueDate = calculateNextDueDate(todayStr, originalTask.repeating_frequency)
+                  
+                  // Create duplicate task
+                  const duplicateTask = {
+                    title: originalTask.title,
+                    status: 'To do',
+                    category_id: originalTask.category_id,
+                    description: originalTask.description,
+                    due_date: nextDueDate,
+                    is_hard_deadline: originalTask.is_hard_deadline,
+                    is_recurring: originalTask.is_recurring || false,
+                    recurring_frequency: originalTask.recurring_frequency || null,
+                    is_repeating: originalTask.is_repeating,
+                    repeating_frequency: originalTask.repeating_frequency,
+                    points: originalTask.points ?? 10,
+                    user_id: user?.id
+                  }
+                  
+                  const { error: insertError } = await supabase.from('tasks').insert(duplicateTask)
+                  if (insertError) {
+                    console.error('Error creating repeating task:', insertError)
+                  }
+                }
               }
             }
             
@@ -2110,12 +2229,14 @@ function TasksView() {
           : parsed.dateFilter 
           ? new Set<string>([parsed.dateFilter])
           : new Set<string>(['All'])
+        const attributeFiltersSet = new Set<string>((parsed.attributeFilters || ['All']) as string[])
         const result = {
           sortBy: (parsed.sortBy === 'completion_date' ? 'completion_date' : parsed.sortBy === 'status' ? 'status' : parsed.sortBy === 'category' ? 'category' : parsed.sortBy === 'title' ? 'title' : 'due_date') as 'due_date' | 'completion_date' | 'status' | 'category' | 'title',
           sortOrder: parsed.sortOrder || 'desc',
           statusFilters: statusFiltersSet,
           dateFilters: dateFiltersSet,
-          categoryFilters: categoryFiltersSet
+          categoryFilters: categoryFiltersSet,
+          attributeFilters: attributeFiltersSet
         }
         return result
       }
@@ -2135,8 +2256,9 @@ function TasksView() {
   const [statusFilters, setStatusFilters] = useState<Set<string>>(savedState?.statusFilters || new Set(['All']))
   const [dateFilters, setDateFilters] = useState<Set<string>>(savedState?.dateFilters || new Set(['All']))
   const [categoryFilters, setCategoryFilters] = useState<Set<string>>(savedState?.categoryFilters || new Set(['All']))
+  const [attributeFilters, setAttributeFilters] = useState<Set<string>>(savedState?.attributeFilters || new Set(['All']))
   const [searchTerm, setSearchTerm] = useState<string>('')
-  const [mobileFilterTab, setMobileFilterTab] = useState<'Status' | 'Date' | 'Category' | 'Sort'>('Status')
+  const [mobileFilterTab, setMobileFilterTab] = useState<'Status' | 'Date' | 'Category' | 'Attribute' | 'Sort'>('Status')
   const supabase = createClient()
 
   // Save state to localStorage whenever filters/sorts change
@@ -2148,12 +2270,13 @@ function TasksView() {
         sortOrder,
         statusFilters: Array.from(statusFilters),
         dateFilters: Array.from(dateFilters),
-        categoryFilters: Array.from(categoryFilters)
+        categoryFilters: Array.from(categoryFilters),
+        attributeFilters: Array.from(attributeFilters)
       }))
     } catch (e) {
       console.error('Error saving state:', e)
     }
-  }, [sortBy, sortOrder, statusFilters, dateFilters, categoryFilters])
+  }, [sortBy, sortOrder, statusFilters, dateFilters, categoryFilters, attributeFilters])
 
   useEffect(() => {
     loadTasks()
@@ -2265,6 +2388,7 @@ function TasksView() {
 
   const updateTask = async (id: string | null, updates: any) => {
     const { data: { user } } = await supabase.auth.getUser()
+    const skipRecurrence = updates?._skipRecurrence === true
     
     // Filter out non-updatable fields (id, user_id, created_at, categories from join)
     const allowedFields = ['title', 'status', 'category_id', 'description', 'due_date', 'is_hard_deadline', 'completion_date', 'is_recurring', 'recurring_frequency', 'is_repeating', 'repeating_frequency', 'points']
@@ -2285,6 +2409,78 @@ function TasksView() {
       // Clear completion date if status is not Complete/Dropped
       if (filteredUpdates.status !== 'Complete' && filteredUpdates.status !== 'Dropped') {
         filteredUpdates.completion_date = null
+      }
+    }
+  
+    // If marking task as Complete, check if it's recurring or repeating and create new task
+    if (!skipRecurrence && id !== null && 'status' in filteredUpdates && (filteredUpdates.status === 'Complete' || filteredUpdates.status === 'Dropped')) {
+      // Fetch the original task to check if it's recurring/repeating
+      const { data: originalTask } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('id', id)
+        .single()
+      
+      if (originalTask) {
+        const isDone = originalTask.status === 'Complete' || originalTask.status === 'Dropped'
+        
+        // If completing a recurring task, create a duplicate with next due date
+        const isRecurring = originalTask.is_recurring === true || originalTask.is_recurring === 'true' || originalTask.is_recurring === 1
+        if (!isDone && isRecurring && originalTask.recurring_frequency && originalTask.due_date) {
+          const nextDueDate = calculateNextDueDate(originalTask.due_date, originalTask.recurring_frequency)
+          
+          // Create duplicate task
+          const duplicateTask = {
+            title: originalTask.title,
+            status: 'To do',
+            category_id: originalTask.category_id,
+            description: originalTask.description,
+            due_date: nextDueDate,
+            is_hard_deadline: originalTask.is_hard_deadline,
+            is_recurring: originalTask.is_recurring,
+            recurring_frequency: originalTask.recurring_frequency,
+            is_repeating: originalTask.is_repeating || false,
+            repeating_frequency: originalTask.repeating_frequency || null,
+            points: originalTask.points ?? 10,
+            user_id: user?.id
+          }
+          
+          const { error: insertError } = await supabase.from('tasks').insert(duplicateTask)
+          if (insertError) {
+            console.error('Error creating recurring task:', insertError)
+          }
+        }
+        
+        // If completing a repeating task, create a duplicate with next due date after completion
+        const isRepeating = originalTask.is_repeating === true || originalTask.is_repeating === 'true' || originalTask.is_repeating === 1
+        if (!isDone && isRepeating && originalTask.repeating_frequency) {
+          // Calculate next due date from today (completion date) instead of original due date
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          const todayStr = today.toISOString().split('T')[0]
+          const nextDueDate = calculateNextDueDate(todayStr, originalTask.repeating_frequency)
+          
+          // Create duplicate task
+          const duplicateTask = {
+            title: originalTask.title,
+            status: 'To do',
+            category_id: originalTask.category_id,
+            description: originalTask.description,
+            due_date: nextDueDate,
+            is_hard_deadline: originalTask.is_hard_deadline,
+            is_recurring: originalTask.is_recurring || false,
+            recurring_frequency: originalTask.recurring_frequency || null,
+            is_repeating: originalTask.is_repeating,
+            repeating_frequency: originalTask.repeating_frequency,
+            points: originalTask.points ?? 10,
+            user_id: user?.id
+          }
+          
+          const { error: insertError } = await supabase.from('tasks').insert(duplicateTask)
+          if (insertError) {
+            console.error('Error creating repeating task:', insertError)
+          }
+        }
       }
     }
   
@@ -2398,7 +2594,8 @@ function TasksView() {
     
     await updateTask(task.id, {
       status: isDone ? 'To do' : 'Complete',
-      completion_date: isDone ? null : new Date().toISOString().split('T')[0]
+      completion_date: isDone ? null : new Date().toISOString().split('T')[0],
+      _skipRecurrence: true
     })
   }
 
@@ -2555,6 +2752,29 @@ function TasksView() {
       })
     }
 
+    // Apply attribute filter (multiple selections supported - OR logic)
+    if (attributeFilters.size > 0 && !attributeFilters.has('All')) {
+      filtered = filtered.filter(task => {
+        // Check if task matches any of the selected attribute filters (OR logic)
+        if (attributeFilters.has('Hard deadline')) {
+          if (task.is_hard_deadline === true || task.is_hard_deadline === 'true' || task.is_hard_deadline === 1) return true
+        }
+        if (attributeFilters.has('Recurring')) {
+          if (task.is_recurring === true || task.is_recurring === 'true' || task.is_recurring === 1) return true
+        }
+        if (attributeFilters.has('Repeating')) {
+          if (task.is_repeating === true || task.is_repeating === 'true' || task.is_repeating === 1) return true
+        }
+        if (attributeFilters.has('None')) {
+          const hasHardDeadline = task.is_hard_deadline === true || task.is_hard_deadline === 'true' || task.is_hard_deadline === 1
+          const hasRecurring = task.is_recurring === true || task.is_recurring === 'true' || task.is_recurring === 1
+          const hasRepeating = task.is_repeating === true || task.is_repeating === 'true' || task.is_repeating === 1
+          if (!hasHardDeadline && !hasRecurring && !hasRepeating) return true
+        }
+        return false
+      })
+    }
+
     // Apply search filter
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase().trim()
@@ -2615,6 +2835,27 @@ function TasksView() {
       return baseTasks.filter(t => !t.category_id).length
     }
     return baseTasks.filter(t => t.category_id === categoryId).length
+  }
+
+  // Get task count for a specific attribute filter option
+  const getAttributeCount = (attributeOption: string, baseTasks: any[]) => {
+    if (attributeOption === 'All') {
+      return baseTasks.length
+    } else if (attributeOption === 'Hard deadline') {
+      return baseTasks.filter(t => t.is_hard_deadline === true || t.is_hard_deadline === 'true' || t.is_hard_deadline === 1).length
+    } else if (attributeOption === 'Recurring') {
+      return baseTasks.filter(t => t.is_recurring === true || t.is_recurring === 'true' || t.is_recurring === 1).length
+    } else if (attributeOption === 'Repeating') {
+      return baseTasks.filter(t => t.is_repeating === true || t.is_repeating === 'true' || t.is_repeating === 1).length
+    } else if (attributeOption === 'None') {
+      return baseTasks.filter(t => {
+        const hasHardDeadline = t.is_hard_deadline === true || t.is_hard_deadline === 'true' || t.is_hard_deadline === 1
+        const hasRecurring = t.is_recurring === true || t.is_recurring === 'true' || t.is_recurring === 1
+        const hasRepeating = t.is_repeating === true || t.is_repeating === 'true' || t.is_repeating === 1
+        return !hasHardDeadline && !hasRecurring && !hasRepeating
+      }).length
+    }
+    return 0
   }
 
   // Calculate completed points for a task
@@ -2778,6 +3019,71 @@ function TasksView() {
     return base
   }
 
+  const getBaseTasksForAttributeCount = (attributeOption: string) => {
+    let base = [...tasks]
+
+    // Apply status filter
+    if (statusFilters.size > 0 && !statusFilters.has('All')) {
+      base = base.filter(task => {
+        if (statusFilters.has('Ongoing')) {
+          if (['To do', 'In progress', 'Waiting'].includes(task.status)) {
+            return true
+          }
+        }
+        if (statusFilters.has(task.status)) {
+          return true
+        }
+        return false
+      })
+    }
+
+    // Apply date filter (multiple selections supported - OR logic)
+    if (dateFilters.size > 0 && !dateFilters.has('All')) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const todayStr = today.toISOString().split('T')[0]
+      const sevenDaysFromNow = new Date(today)
+      sevenDaysFromNow.setDate(today.getDate() + 7)
+      const sevenDaysStr = sevenDaysFromNow.toISOString().split('T')[0]
+      const sevenDaysAgo = new Date(today)
+      sevenDaysAgo.setDate(today.getDate() - 6)
+      const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
+
+      base = base.filter(task => {
+        // Check if task matches any of the selected date filters (OR logic)
+        if (dateFilters.has('Today & overdue')) {
+          if (task.due_date && task.due_date <= todayStr) return true
+        }
+        if (dateFilters.has('Next 7 days')) {
+          if (task.due_date && task.due_date >= todayStr && task.due_date <= sevenDaysStr) return true
+        }
+        if (dateFilters.has('Completed last 7 days')) {
+          if (task.completion_date && task.completion_date >= sevenDaysAgoStr && task.completion_date <= todayStr) return true
+        }
+        if (dateFilters.has('No due date')) {
+          if (!task.due_date) return true
+        }
+        return false
+      })
+    }
+
+    // Apply category filter (multiple selections supported - OR logic)
+    if (categoryFilters.size > 0 && !categoryFilters.has('All')) {
+      base = base.filter(task => {
+        // Check if task matches any of the selected category filters (OR logic)
+        if (categoryFilters.has('None')) {
+          if (!task.category_id) return true
+        }
+        if (task.category_id && categoryFilters.has(task.category_id)) {
+          return true
+        }
+        return false
+      })
+    }
+
+    return base
+  }
+
   // Sort tasks based on current sort settings
   const getSortedTasks = () => {
     const filtered = getFilteredTasks()
@@ -2929,6 +3235,34 @@ function TasksView() {
     }
   }
 
+  // Attribute filter handlers
+  const toggleAttributeFilter = (attributeOption: string) => {
+    const newFilters = new Set(attributeFilters)
+    if (attributeOption === 'All') {
+      if (newFilters.has('All')) {
+        // If All is already selected, do nothing
+        return
+      } else {
+        // Select All and unselect everything else
+        setAttributeFilters(new Set(['All']))
+      }
+    } else {
+      // Remove All if it's selected
+      newFilters.delete('All')
+      if (newFilters.has(attributeOption)) {
+        newFilters.delete(attributeOption)
+      } else {
+        newFilters.add(attributeOption)
+      }
+      // If no attribute filters selected, select All
+      if (newFilters.size === 0) {
+        setAttributeFilters(new Set(['All']))
+      } else {
+        setAttributeFilters(newFilters)
+      }
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -2961,7 +3295,7 @@ function TasksView() {
           <div className="md:hidden">
             {/* Tab Headers */}
             <div className="flex gap-1 mb-3 border-b">
-              {(['Status', 'Date', 'Category', 'Sort'] as const).map((tab) => (
+              {(['Status', 'Date', 'Category', 'Attribute', 'Sort'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setMobileFilterTab(tab)}
@@ -3072,6 +3406,30 @@ function TasksView() {
                   >
                     None ({getCategoryCount('None', getBaseTasksForCategoryCount('None'))})
                   </button>
+                </div>
+              )}
+
+              {mobileFilterTab === 'Attribute' && (
+                <div className="flex flex-wrap gap-1.5">
+                  {['All', 'Hard deadline', 'Recurring', 'Repeating', 'None'].map(attributeOption => {
+                    const baseTasks = getBaseTasksForAttributeCount(attributeOption)
+                    const count = getAttributeCount(attributeOption, baseTasks)
+                    const isSelected = attributeFilters.has(attributeOption)
+                    return (
+                      <button
+                        key={attributeOption}
+                        onClick={() => toggleAttributeFilter(attributeOption)}
+                        className={`px-2.5 py-1 rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer ${
+                          isSelected
+                            ? 'text-white shadow-md border-2 border-black dark:border-white shadow-[inset_0_0_0_2px_white] dark:shadow-[inset_0_0_0_2px_black]'
+                            : 'bg-gray-200 text-gray-700 border-2 border-transparent'
+                        }`}
+                        style={isSelected ? { backgroundColor: '#11551a' } : {}}
+                      >
+                        {attributeOption} ({count})
+                      </button>
+                    )
+                  })}
                 </div>
               )}
 
@@ -3262,6 +3620,41 @@ function TasksView() {
                 >
                   None ({getCategoryCount('None', getBaseTasksForCategoryCount('None'))})
                 </button>
+              </div>
+            </div>
+
+            {/* Attribute Filter */}
+            <div>
+              <div className="flex flex-wrap gap-1.5">
+                {['All', 'Hard deadline', 'Recurring', 'Repeating', 'None'].map(attributeOption => {
+                  const baseTasks = getBaseTasksForAttributeCount(attributeOption)
+                  const count = getAttributeCount(attributeOption, baseTasks)
+                  const isSelected = attributeFilters.has(attributeOption)
+                  return (
+                    <button
+                      key={attributeOption}
+                      onClick={() => toggleAttributeFilter(attributeOption)}
+                      className={`px-2.5 py-1 rounded-lg text-lg font-medium transition-all duration-200 hover:scale-[1.02] cursor-pointer ${
+                        isSelected
+                          ? 'text-white shadow-md border-2 border-gray-900 dark:border-gray-300'
+                          : 'bg-gray-200 text-gray-700 border-2 border-transparent'
+                      }`}
+                      style={isSelected ? { backgroundColor: '#11551a' } : {}}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.backgroundColor = '#e0e0e0'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.backgroundColor = '#e5e7eb'
+                        }
+                      }}
+                    >
+                      {attributeOption} ({count})
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -3668,6 +4061,40 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
     
     const today = new Date().toISOString().split('T')[0]
     
+    // If completing a recurring task, create a duplicate with next due date
+    const isRecurring = task.is_recurring === true || task.is_recurring === 'true' || task.is_recurring === 1 || editedTask.is_recurring === true || editedTask.is_recurring === 'true' || editedTask.is_recurring === 1
+    const recurringFrequency = task.recurring_frequency || editedTask.recurring_frequency
+    const taskDueDate = task.due_date || editedTask.due_date
+    
+    if (isRecurring && recurringFrequency && taskDueDate) {
+      const nextDueDate = calculateNextDueDate(taskDueDate, recurringFrequency)
+      
+      // Create duplicate task
+      const { data: { user } } = await supabase.auth.getUser()
+      const duplicateTask = {
+        title: task.title || editedTask.title,
+        status: 'To do',
+        category_id: task.category_id || editedTask.category_id,
+        description: task.description || editedTask.description,
+        due_date: nextDueDate,
+        is_hard_deadline: task.is_hard_deadline || editedTask.is_hard_deadline || false,
+        is_recurring: task.is_recurring || editedTask.is_recurring || false,
+        recurring_frequency: recurringFrequency,
+        is_repeating: task.is_repeating || editedTask.is_repeating || false,
+        repeating_frequency: task.repeating_frequency || editedTask.repeating_frequency || null,
+        points: task.points || editedTask.points || 10,
+        user_id: user?.id
+      }
+      
+      const { error: insertError } = await supabase.from('tasks').insert(duplicateTask)
+      if (insertError) {
+        console.error('Error creating recurring task:', insertError)
+        alert('Error creating recurring task: ' + insertError.message)
+      } else {
+        console.log('Recurring task created successfully with due date:', nextDueDate)
+      }
+    }
+    
     // If completing a repeating task, create a duplicate with next due date after completion
     const isRepeating = task.is_repeating === true || task.is_repeating === 'true' || task.is_repeating === 1 || editedTask.is_repeating === true || editedTask.is_repeating === 'true' || editedTask.is_repeating === 1
     const repeatingFrequency = task.repeating_frequency || editedTask.repeating_frequency
@@ -3705,7 +4132,8 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
     // Mark task as complete
     const updatedTask = await onUpdate(task.id, {
       status: 'Complete',
-      completion_date: today
+      completion_date: today,
+      _skipRecurrence: true
     })
     
     // Update editedTask state
@@ -3743,6 +4171,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
   const statuses = ['Concept', 'To do', 'In progress', 'Waiting', 'On hold', 'Complete', 'Dropped']
 
   const isNewTask = task.id === null
+  const isCompletionDateEditable = editedTask.status === 'Complete' || editedTask.status === 'Dropped'
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5">
@@ -4060,7 +4489,8 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
                                   .eq('id', subTask.id)
                               }
                             }}
-                            className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            disabled={!subTask.completion_date}
+                            className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-50"
                           />
                         </div>
                         
@@ -4259,10 +4689,11 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
             type="date"
             value={editedTask.completion_date || ''}
             onChange={(e) => setEditedTask({ ...editedTask, completion_date: e.target.value })}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            disabled={!isCompletionDateEditable}
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-50"
           />
           <p className="text-lg text-gray-500 mt-1">
-            Auto-filled when marked as Complete, but can be manually overridden
+            Auto-filled when marked as Complete or Dropped, and editable only for those statuses
           </p>
         </div>
 
@@ -5027,6 +5458,78 @@ function DailyView() {
       // Clear completion date if status is not Complete/Dropped
       if (filteredUpdates.status !== 'Complete' && filteredUpdates.status !== 'Dropped') {
         filteredUpdates.completion_date = null
+      }
+    }
+  
+    // If marking task as Complete, check if it's recurring or repeating and create new task
+    if (!skipRecurrence && id !== null && 'status' in filteredUpdates && (filteredUpdates.status === 'Complete' || filteredUpdates.status === 'Dropped')) {
+      // Fetch the original task to check if it's recurring/repeating
+      const { data: originalTask } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('id', id)
+        .single()
+      
+      if (originalTask) {
+        const isDone = originalTask.status === 'Complete' || originalTask.status === 'Dropped'
+        
+        // If completing a recurring task, create a duplicate with next due date
+        const isRecurring = originalTask.is_recurring === true || originalTask.is_recurring === 'true' || originalTask.is_recurring === 1
+        if (!isDone && isRecurring && originalTask.recurring_frequency && originalTask.due_date) {
+          const nextDueDate = calculateNextDueDate(originalTask.due_date, originalTask.recurring_frequency)
+          
+          // Create duplicate task
+          const duplicateTask = {
+            title: originalTask.title,
+            status: 'To do',
+            category_id: originalTask.category_id,
+            description: originalTask.description,
+            due_date: nextDueDate,
+            is_hard_deadline: originalTask.is_hard_deadline,
+            is_recurring: originalTask.is_recurring,
+            recurring_frequency: originalTask.recurring_frequency,
+            is_repeating: originalTask.is_repeating || false,
+            repeating_frequency: originalTask.repeating_frequency || null,
+            points: originalTask.points ?? 10,
+            user_id: user?.id
+          }
+          
+          const { error: insertError } = await supabase.from('tasks').insert(duplicateTask)
+          if (insertError) {
+            console.error('Error creating recurring task:', insertError)
+          }
+        }
+        
+        // If completing a repeating task, create a duplicate with next due date after completion
+        const isRepeating = originalTask.is_repeating === true || originalTask.is_repeating === 'true' || originalTask.is_repeating === 1
+        if (!isDone && isRepeating && originalTask.repeating_frequency) {
+          // Calculate next due date from today (completion date) instead of original due date
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          const todayStr = today.toISOString().split('T')[0]
+          const nextDueDate = calculateNextDueDate(todayStr, originalTask.repeating_frequency)
+          
+          // Create duplicate task
+          const duplicateTask = {
+            title: originalTask.title,
+            status: 'To do',
+            category_id: originalTask.category_id,
+            description: originalTask.description,
+            due_date: nextDueDate,
+            is_hard_deadline: originalTask.is_hard_deadline,
+            is_recurring: originalTask.is_recurring || false,
+            recurring_frequency: originalTask.recurring_frequency || null,
+            is_repeating: originalTask.is_repeating,
+            repeating_frequency: originalTask.repeating_frequency,
+            points: originalTask.points ?? 10,
+            user_id: user?.id
+          }
+          
+          const { error: insertError } = await supabase.from('tasks').insert(duplicateTask)
+          if (insertError) {
+            console.error('Error creating repeating task:', insertError)
+          }
+        }
       }
     }
   
