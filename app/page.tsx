@@ -5436,8 +5436,55 @@ function DailyView() {
     if (data) setCategories(data)
   }
 
+  const calculateNextDueDate = (currentDueDate: string, frequency: any): string => {
+    const date = new Date(currentDueDate + 'T00:00:00')
+    
+    try {
+      const parsed = typeof frequency === 'string' ? JSON.parse(frequency) : frequency
+      if (parsed.interval && parsed.unit) {
+        const interval = parsed.interval
+        switch (parsed.unit) {
+          case 'days':
+            date.setDate(date.getDate() + interval)
+            break
+          case 'weeks':
+            date.setDate(date.getDate() + (interval * 7))
+            break
+          case 'months':
+            date.setMonth(date.getMonth() + interval)
+            break
+          case 'years':
+            date.setFullYear(date.getFullYear() + interval)
+            break
+        }
+        return date.toISOString().split('T')[0]
+      }
+    } catch {
+      // Not JSON, treat as simple string
+    }
+    
+    // Handle simple frequency strings
+    switch (frequency) {
+      case 'daily':
+        date.setDate(date.getDate() + 1)
+        break
+      case 'weekly':
+        date.setDate(date.getDate() + 7)
+        break
+      case 'monthly':
+        date.setMonth(date.getMonth() + 1)
+        break
+      case 'yearly':
+        date.setFullYear(date.getFullYear() + 1)
+        break
+    }
+    
+    return date.toISOString().split('T')[0]
+  }
+
   const updateTask = async (id: string | null, updates: any) => {
     const { data: { user } } = await supabase.auth.getUser()
+    const skipRecurrence = updates?._skipRecurrence === true
     
     // Filter out non-updatable fields
     const allowedFields = ['title', 'status', 'category_id', 'description', 'due_date', 'is_hard_deadline', 'completion_date', 'is_recurring', 'recurring_frequency', 'is_repeating', 'repeating_frequency', 'points']
