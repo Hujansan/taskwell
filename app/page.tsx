@@ -4312,6 +4312,10 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
                 // Distribute points including the new one
                 const distributedPoints = distributePoints(totalPoints, newSubTasks.length + 1)
                 
+                // Generate default title based on subtask count
+                const subtaskNumber = newSubTasks.length + 1
+                const defaultTitle = `Subtask ${subtaskNumber}`
+                
                 // For existing tasks, save to database immediately
                 if (task.id) {
                   // Create new subtask in database
@@ -4319,7 +4323,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
                     .from('sub_tasks')
                     .insert({
                       task_id: task.id,
-                      title: '',
+                      title: defaultTitle,
                       due_date: editedTask.due_date || null,
                       completion_date: null,
                       points: distributedPoints[newSubTasks.length],
@@ -4354,7 +4358,7 @@ function TaskDetailView({ task, categories, onClose, onUpdate, onDelete, onShowC
                   const newSubTask = {
                     id: null,
                     task_id: null,
-                    title: '',
+                    title: defaultTitle,
                     due_date: editedTask.due_date || null,
                     completion_date: null,
                     points: distributedPoints[newSubTasks.length],
