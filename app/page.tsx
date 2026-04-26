@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
+import { deleteTaskForUser, getTaskWithRelationsForUser, listTasksForUser } from '@/lib/data/tasks'
 import type { User } from '@supabase/supabase-js'
 import Image from 'next/image'
 
@@ -645,11 +646,10 @@ function DashboardView() {
   const supabase = createClient()
 
   const loadTasks = async () => {
-    const { data } = await supabase
-      .from('tasks')
-      .select('*, categories(*), sub_tasks(*)')
-      .order('created_at', { ascending: false })
-    if (data) setTasks(data)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const data = await listTasksForUser(supabase, user.id)
+    setTasks(data)
   }
 
   const loadHabits = async () => {
@@ -1739,7 +1739,9 @@ function TodayView() {
             return null
           }}
           onDelete={async (id: string) => {
-            await supabase.from('tasks').delete().eq('id', id)
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) return
+            await deleteTaskForUser(supabase, user.id, id)
             loadTasks()
             loadTodayItems()
             setSelectedTask(null)
@@ -2343,11 +2345,10 @@ function TasksView() {
   }
 
   const loadTasks = async () => {
-    const { data } = await supabase
-      .from('tasks')
-      .select('*, categories(*), sub_tasks(*)')
-      .order('created_at', { ascending: false })
-    if (data) setTasks(data)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const data = await listTasksForUser(supabase, user.id)
+    setTasks(data)
   }
 
   const loadCategories = async () => {
@@ -2381,7 +2382,9 @@ function TasksView() {
 
   const deleteTask = async (id: string) => {
     if (!confirm('Are you sure you want to delete this task?')) return
-    await supabase.from('tasks').delete().eq('id', id)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await deleteTaskForUser(supabase, user.id, id)
     loadTasks()
     if (selectedTask?.id === id) setSelectedTask(null)
   }
@@ -5621,11 +5624,10 @@ function DailyView() {
       // Update selectedTask if it's the one being updated
       if (selectedTask && selectedTask.id === id) {
         // Reload the task with sub_tasks
-        const { data: updatedTask } = await supabase
-          .from('tasks')
-          .select('*, categories(*), sub_tasks(*)')
-          .eq('id', id)
-          .single()
+        if (!id) return result.data
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return result.data
+        const updatedTask = await getTaskWithRelationsForUser(supabase, user.id, id)
         if (updatedTask) {
           setSelectedTask(updatedTask)
         }
@@ -5636,7 +5638,9 @@ function DailyView() {
 
   const deleteTask = async (id: string) => {
     if (!confirm('Are you sure you want to delete this task?')) return
-    await supabase.from('tasks').delete().eq('id', id)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await deleteTaskForUser(supabase, user.id, id)
     await loadCompletedTasks(selectedDate)
     if (selectedTask?.id === id) setSelectedTask(null)
   }
